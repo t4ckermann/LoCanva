@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+
+# Node
+node_modules/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+
+# Flask instance folder (runtime data — generated images, history)
+instance/
+.server.pid
+
+# TypeScript compiled output
+static/js/*.js
+static/js/*.map
+
+# Environment variables
+.env
+.env.local

@@ -11,6 +11,9 @@ build/
 .eggs/
 *.so
 
+# Node
+node_modules/
+
 # Virtual environments
 venv/
 .venv/
@@ -30,6 +33,10 @@ env/
 # Flask instance folder (runtime data — generated images, history)
 instance/
 .server.pid
+
+# TypeScript compiled output
+static/js/*.js
+static/js/*.map
 
 # Environment variables
 .env

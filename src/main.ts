@@ -101,6 +101,7 @@ ui.themeToggle.addEventListener("click", () => {
     settings.theme = next;
     applyTheme(next);
 });
+<<<<<<< HEAD
 ui.promptToggle.addEventListener("click", () => {
     const expanding = !ui.promptBar.classList.contains("expanded");
     setExpanded(expanding);

@@ -21,6 +21,18 @@ LoCanva is a locally-hosted canvas app powered by Ollama. Flask backend (`app.py
 | Lint TypeScript | `npm run lint` |
 | Run server | `python app.py` |
 
+## Linting (mandatory)
+
+After creating or modifying **any** code file, always run the appropriate linter and fix all reported issues before considering the task done:
+
+| File type | Command |
+|-----------|---------|
+| TypeScript (`src/**/*.ts`) | `npm run lint` |
+| CSS (`static/css/**/*.css`) | `npx stylelint "static/css/**/*.css"` |
+| Python (`*.py`) | `flake8 app.py` |
+
+Do not skip linting. If a linter is not yet installed, install it first.
+
 ## Architecture
 
 - **`app.py`** — Flask entrypoint. Serves `templates/index.html` at `/`. Talks to Ollama via `OLLAMA_BASE_URL`. Config via env vars (supports `.env`).

@@ -33,6 +33,8 @@ After creating or modifying **any** code file, always run the appropriate linter
 
 Do not skip linting. If a linter is not yet installed, install it first.
 
+After any edit, also remove dead code — unused variables, functions, imports, CSS rules, and HTML elements that are no longer referenced. Dead code must not accumulate.
+
 ## Testing (mandatory)
 
 After any change to `app.py` or `tests/`, always run the test suite and fix all failures before considering the task done:

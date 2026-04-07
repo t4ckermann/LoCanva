@@ -23,7 +23,7 @@ LoCanva is a locally-hosted canvas app powered by Ollama. Flask backend (`app.py
 
 ## Linting (mandatory)
 
-After creating or modifying **any** code file, always run the appropriate linter and fix all reported issues before considering the task done:
+After creating or modifying **any** code file, always run the appropriate linter and fix all reported issues before considering the task done. Also remove any CSS rules that are no longer referenced by the HTML or JS — dead rules must not accumulate.
 
 | File type | Command |
 |-----------|---------|

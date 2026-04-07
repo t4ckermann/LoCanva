@@ -42,8 +42,10 @@ pip install -r requirements.txt
 ## Running
 
 ```bash
-npm run build   # compile TypeScript → static/js/
-python app.py
+nvm use
+source venv/bin/activate      # activate Python venv
+npm run build                 # compile TypeScript → static/js/
+python3 app.py
 ```
 
 The server starts at `http://127.0.0.1:1337` by default.

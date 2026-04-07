@@ -9,7 +9,7 @@ load_dotenv()
 app = Flask(__name__)
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "z-image-turbo")
+IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "x/z-image-turbo")
 PROMPT_MODEL = os.environ.get("PROMPT_MODEL", "llama3.2")
 
 if not IMAGE_MODEL:
@@ -44,14 +44,13 @@ def ollama_url(path):
 
 
 def ollama_error(e):
-    if isinstance(e, requests.exceptions.HTTPError):
-        status = e.response.status_code if e.response else None
-        if status == 404:
-            return "Model not found in Ollama. Is it pulled?"
+    resp = getattr(e, "response", None)
+    status = getattr(resp, "status_code", None) if resp else None
+    if status == 404:
+        return "Model not found in Ollama. Is it pulled?"
+    if status is not None:
         return f"Ollama error: HTTP {status}"
-    if isinstance(e, requests.exceptions.ConnectionError):
-        return "Cannot reach Ollama. Is it running?"
-    return f"Ollama error: {e}"
+    return "Cannot reach Ollama. Is it running?"
 
 
 @app.route("/")

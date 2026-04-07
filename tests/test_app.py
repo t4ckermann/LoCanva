@@ -35,7 +35,7 @@ class TestOptimize:
     def test_missing_prompt_returns_400(self, client):
         resp = client.post("/api/optimize", json={})
         assert resp.status_code == 400
-        assert "error" in resp.get_json()
+        assert "Ollama" in resp.get_json()["error"]
 
     def test_safety_only_safe(self, client):
         with patch("app.requests.post", return_value=mock_chat("SAFE")):
@@ -80,7 +80,7 @@ class TestOptimize:
                 "/api/optimize", json={"prompt": "a cat", "optimize": False}
             )
         assert resp.status_code == 502
-        assert "error" in resp.get_json()
+        assert "Ollama" in resp.get_json()["error"]
 
     def test_ollama_404_returns_502_with_hint(self, client):
         import requests as req
@@ -126,7 +126,7 @@ class TestGenerate:
         with patch("app.requests.post", side_effect=err):
             resp = client.post("/api/generate", json={"prompt": "a cat"})
         assert resp.status_code == 502
-        assert "error" in resp.get_json()
+        assert "Ollama" in resp.get_json()["error"]
 
     def test_ollama_404_returns_502_with_hint(self, client):
         import requests as req

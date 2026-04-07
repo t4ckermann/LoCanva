@@ -1,3 +1,27 @@
+/* Material Symbols (self-hosted, ligature-based) */
+@font-face {
+    font-family: 'Material Symbols';
+    src: url('/static/assets/material-symbols-v44-latin-regular.woff2') format('woff2');
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+}
+
+.material-icon {
+    font-family: 'Material Symbols', sans-serif;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 1.2em;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
+
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
@@ -11,6 +35,30 @@
     --text: #e8e8e8;
     --text-muted: #777;
     --accent: #c9b8ff;
+    --overlay-bg: rgb(17 17 17 / 100%);
+    --blocked-bg: #1f1410;
+    --blocked-border: #4a2a1a;
+    --blocked-text: #f5a97f;
+    --error-bg: #1a1018;
+    --error-border: #3a1a2a;
+    --error-text: #f5a0c0;
+    --border-radius: 4px;    
+}
+
+[data-theme="light"] {
+    --bg: #f5f5f5;
+    --surface: #fff;
+    --border: #e0e0e0;
+    --text: #1a1a1a;
+    --text-muted: #888;
+    --accent: #7c5cbf;
+    --overlay-bg: rgb(245 245 245 / 100%);
+    --blocked-bg: #fff4ec;
+    --blocked-border: #e8b08a;
+    --blocked-text: #b05a20;
+    --error-bg: #fff0f4;
+    --error-border: #e8a0b8;
+    --error-text: #a02050;
 }
 
 html, body {
@@ -62,7 +110,7 @@ html, body {
     align-items: center;
     justify-content: center;
     gap: 16px;
-    background: rgb(17 17 17 / 85%);
+    background: var(--overlay-bg);
 }
 
 .loading-overlay-spinner {
@@ -91,7 +139,7 @@ html, body {
     padding: 10px 14px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--border-radius);
     color: var(--text-muted);
     font-size: 12px;
     line-height: 1.5;
@@ -107,7 +155,7 @@ html, body {
     left: 50%;
     transform: translateX(-50%);
     padding: 10px 16px;
-    border-radius: 6px;
+    border-radius: var(--border-radius);
     font-size: 13px;
     text-align: center;
     max-width: 480px;
@@ -115,15 +163,15 @@ html, body {
 }
 
 .blocked-msg {
-    background: #1f1410;
-    border: 1px solid #4a2a1a;
-    color: #f5a97f;
+    background: var(--blocked-bg);
+    border: 1px solid var(--blocked-border);
+    color: var(--blocked-text);
 }
 
 .error-msg {
-    background: #1a1018;
-    border: 1px solid #3a1a2a;
-    color: #f5a0c0;
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    color: var(--error-text);
 }
 
 /* Prompt bar — overlays image area from the top */
@@ -133,39 +181,63 @@ html, body {
     top: 0;
     left: 0;
     right: 0;
-    z-index: 10;
+    z-index: 100;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
 }
 
+.prompt-bar-header {
+    display: flex;
+    align-items: center;
+    min-height: 64px;
+}
+
+.logo {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: conic-gradient(
+        #ffb3ba, #ffd9b3, #fffbb3, #b3f5cc,
+        #b3d9ff, #c9b8ff, #f5b3ff, #ffb3ba
+    );
+    margin:0 16px;
+}
+
 .prompt-toggle {
-    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 10px 16px;
-    background: none;
-    border: none;
-    border-radius: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
     color: var(--text-muted);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 13px;
     transition: color 0.15s;
+    &:hover:not(:disabled) {
+        border-color: var(--border);
+    }
+}
+
+.prompt-bar:not(.expanded) {
+    .prompt-toggle {
+        background: none;
+        border: none;
+    }
+}
+
+#theme-toggle {
+    position: absolute;
+    right: 16px;
+    top: 8px;
+    font-size: 15px;
+    line-height: 1;
 }
 
 .prompt-toggle:hover:not(:disabled) {
     color: var(--text);
 }
 
-.toggle-icon {
-    transition: transform 0.2s;
-    display: inline-block;
-}
 
-.prompt-bar:not(.expanded) .toggle-icon {
-    transform: rotate(-90deg);
-}
 
 .prompt-content {
     padding: 0 16px 14px;
@@ -182,7 +254,7 @@ textarea#prompt {
     flex: 1;
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--border-radius);
     color: var(--text);
     font-family: inherit;
     font-size: 14px;
@@ -190,6 +262,8 @@ textarea#prompt {
     resize: none;
     line-height: 1.5;
     outline: none;
+    z-index: 150;
+    min-height: 104px;
 }
 
 textarea#prompt:focus {
@@ -199,20 +273,22 @@ textarea#prompt:focus {
 .buttons {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 
 button {
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--border-radius);
     color: var(--text);
     cursor: pointer;
     font-family: inherit;
-    font-size: 13px;
-    padding: 7px 14px;
+    font-size: 12px;
+    padding: 8px 16px;
     white-space: nowrap;
     transition: border-color 0.15s, color 0.15s;
+    min-height: 48px;
+    gap: 8px;
 }
 
 button:disabled {

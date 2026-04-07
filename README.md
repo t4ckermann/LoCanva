@@ -39,11 +39,24 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Pre-commit hook
+
+Tests run automatically before every commit. The Claude Code hook (`.hooks/settings.json`) covers AI commits. For human commits, run once after cloning:
+
+```bash
+git config core.hooksPath .hooks
+chmod +x .hooks/pre-commit
+```
+
+> The hook requires nvm to be installed.
+
 ## Running
 
 ```bash
-npm run build   # compile TypeScript → static/js/
-python app.py
+nvm use
+source venv/bin/activate      # activate Python venv
+npm run build                 # compile TypeScript → static/js/
+python3 app.py
 ```
 
 The server starts at `http://127.0.0.1:1337` by default.

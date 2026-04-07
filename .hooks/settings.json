@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NVM_DIR=\"$HOME/.nvm\" && source \"$NVM_DIR/nvm.sh\" && npm test",
+            "if": "Bash(git commit*)",
+            "timeout": 60,
+            "statusMessage": "Running tests…"
+          }
+        ]
+      }
+    ]
+  }
+}

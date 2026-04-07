@@ -9,10 +9,13 @@
 <body>
     <div class="app">
         <div class="prompt-bar expanded" id="prompt-bar">
-            <button class="prompt-toggle" id="prompt-toggle" aria-expanded="true">
-                <span>Prompt</span>
-                <span class="toggle-icon">▾</span>
-            </button>
+            <div class="prompt-bar-header">
+                <div class="logo" aria-hidden="true"></div>
+                <button class="prompt-toggle" id="prompt-toggle" aria-expanded="true">
+                    <span class="material-icon">edit</span> Describe your image
+                </button>
+                <button id="theme-toggle" aria-label="Switch to light mode" title="Toggle theme"></button>
+            </div>
             <div class="prompt-content" id="prompt-content">
                 <textarea id="prompt" placeholder="Describe the image you want to generate…" rows="3"></textarea>
                 <div class="buttons">

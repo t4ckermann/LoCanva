@@ -7,7 +7,32 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-
+    <div class="app">
+        <div class="prompt-bar expanded" id="prompt-bar">
+            <button class="prompt-toggle" id="prompt-toggle" aria-expanded="true">
+                <span>Prompt</span>
+                <span class="toggle-icon">▾</span>
+            </button>
+            <div class="prompt-content" id="prompt-content">
+                <textarea id="prompt" placeholder="Describe the image you want to generate…" rows="3"></textarea>
+                <div class="buttons">
+                    <button id="generate-btn">Generate</button>
+                    <button id="optimize-btn">Optimize &amp; Generate</button>
+                </div>
+            </div>
+        </div>
+        <main class="image-area">
+            <div id="placeholder" class="placeholder">Describe an image and hit Generate</div>
+            <img id="generated-image" class="hidden" alt="Generated image" />
+            <div id="loading-overlay" class="loading-overlay hidden">
+                <div class="loading-overlay-spinner"></div>
+                <span id="loading-msg">Generating image…</span>
+                <div id="optimized-prompt-display" class="optimized-prompt hidden"></div>
+            </div>
+            <div id="blocked-msg" class="blocked-msg hidden"></div>
+            <div id="error-msg" class="error-msg hidden"></div>
+        </main>
+    </div>
     <script type="module" src="/static/js/main.js"></script>
 </body>
 </html>

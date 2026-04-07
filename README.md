@@ -10,6 +10,19 @@ A locally-hosted canvas app powered by [Ollama](https://ollama.com).
 
 ## Setup
 
+**Environment**
+
+```bash
+cp .env.example .env  # then edit .env as needed
+```
+
+**Ollama models**
+
+```bash
+ollama pull x/z-image-turbo  # image generation (IMAGE_MODEL)
+ollama pull llama3.2       # prompt optimization (PROMPT_MODEL)
+```
+
 **Node.js (frontend tooling)**
 
 ```bash
@@ -37,11 +50,13 @@ The server starts at `http://127.0.0.1:1337` by default.
 
 ## Configuration
 
-| Variable          | Default                   | Description                  |
-|-------------------|---------------------------|------------------------------|
-| `HOST`            | `127.0.0.1`               | Bind address                 |
-| `PORT`            | `1337`                    | Listen port                  |
-| `OLLAMA_BASE_URL` | `http://localhost:11434`  | Ollama API base URL          |
+| Variable          | Default                   | Description                              |
+|-------------------|---------------------------|------------------------------------------|
+| `HOST`            | `127.0.0.1`               | Bind address                             |
+| `PORT`            | `1337`                    | Listen port                              |
+| `OLLAMA_BASE_URL` | `http://localhost:11434`  | Ollama API base URL                      |
+| `IMAGE_MODEL`     | `x/z-image-turbo`           | Ollama model used for image generation   |
+| `PROMPT_MODEL`    | `llama3.2`                | Ollama model used for prompt optimization and safety filtering |
 
 ## Network access
 

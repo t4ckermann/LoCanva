@@ -199,7 +199,7 @@ html, body {
         #ffb3ba, #ffd9b3, #fffbb3, #b3f5cc,
         #b3d9ff, #c9b8ff, #f5b3ff, #ffb3ba
     );
-    margin-left: 16px;
+    margin:0 16px;
 }
 
 .prompt-toggle {

@@ -109,7 +109,7 @@ ui.promptToggle.addEventListener("click", () => {
 ui.generateBtn.addEventListener("click", () => run(false));
 ui.optimizeBtn.addEventListener("click", () => run(true));
 ui.prompt.addEventListener("keydown", (e: KeyboardEvent) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) run(false);
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); run(true); }
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────

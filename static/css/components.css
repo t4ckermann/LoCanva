@@ -1,0 +1,125 @@
+/* Buttons */
+
+.buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+button {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    padding: 8px 16px;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s;
+    min-height: 48px;
+    gap: 8px;
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Mobile */
+
+@media (max-width: 640px) {
+    .buttons {
+        flex-direction: row;
+    }
+}
+
+/* Download button */
+
+.download-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    min-height: unset;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    opacity: 0.7;
+}
+
+.download-btn:hover:not(:disabled) {
+    opacity: 1;
+}
+
+/* Loading overlay */
+
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: var(--overlay-bg);
+}
+
+.loading-overlay-spinner {
+    width: 64px;
+    height: 64px;
+    animation: spin 0.85s linear infinite;
+}
+
+#loading-msg {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.optimized-prompt {
+    max-width: 480px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+/* Messages */
+
+.blocked-msg,
+.error-msg {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 16px;
+    border-radius: var(--border-radius);
+    font-size: 13px;
+    text-align: center;
+    max-width: 480px;
+    width: max-content;
+}
+
+.blocked-msg {
+    background: var(--blocked-bg);
+    border: 1px solid var(--blocked-border);
+    color: var(--blocked-text);
+}
+
+.error-msg {
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    color: var(--error-text);
+}

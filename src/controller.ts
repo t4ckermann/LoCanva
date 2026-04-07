@@ -67,6 +67,7 @@ export class Controller {
         if (!prompt || this.isRunning) return;
         this.isRunning = true;
 
+        this.setExpanded(false);
         this.resetMessages();
         this.setLoading(true, optimize ? "Optimizing prompt…" : "Checking prompt…");
         this.setButtonsDisabled(true);
@@ -89,10 +90,8 @@ export class Controller {
             const { image, title } = await callGenerate(finalPrompt);
             this.imageTitle = title;
 
-            this.ui.placeholder.classList.add("hidden");
             this.ui.generatedImage.src = `data:${b64Mime(image)};base64,${image}`;
             this.ui.imageContainer.classList.remove("hidden");
-            this.setExpanded(false);
         } catch (err) {
             this.ui.errorMsg.textContent = err instanceof Error
                 ? err.message

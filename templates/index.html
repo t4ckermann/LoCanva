@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LoCanva</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/components.css">
     <link rel="icon" type="image/svg+xml" href="/static/assets/logo.svg">
 </head>
 <body>
@@ -26,7 +28,6 @@
             </div>
         </div>
         <main class="image-area">
-            <div id="placeholder" class="placeholder">Describe an image and hit Generate</div>
             <div id="image-container" class="image-container hidden">
                 <img id="generated-image" alt="Generated image" />
                 <button id="download-btn" class="download-btn" title="Download image" aria-label="Download image">
@@ -42,6 +43,9 @@
             <div id="error-msg" class="error-msg hidden"></div>
         </main>
     </div>
+    <footer>
+        <p>Powered by <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> · running locally on your machine</p>
+    </footer>
     <script type="module" src="/static/js/main.js"></script>
 </body>
 </html>

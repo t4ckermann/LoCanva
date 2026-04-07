@@ -22,6 +22,7 @@ export interface UI {
 export class Controller {
     private ui: UI;
     private isRunning = false;
+    private imageTitle = "generated-image";
 
     constructor(ui: UI) {
         this.ui = ui;
@@ -85,7 +86,8 @@ export class Controller {
             }
 
             this.setLoading(true, "Generating image — this may take a while…");
-            const image = await callGenerate(finalPrompt);
+            const { image, title } = await callGenerate(finalPrompt);
+            this.imageTitle = title;
 
             this.ui.placeholder.classList.add("hidden");
             this.ui.generatedImage.src = `data:${b64Mime(image)};base64,${image}`;
@@ -104,9 +106,11 @@ export class Controller {
     }
 
     download(): void {
+        // TODO: prepend/append a user-defined prefix or suffix (stored in
+        // localStorage, restored on load) to this.imageTitle before downloading.
         const a = document.createElement("a");
         a.href = this.ui.generatedImage.src;
-        a.download = "generated-image";
+        a.download = this.imageTitle;
         a.click();
     }
 

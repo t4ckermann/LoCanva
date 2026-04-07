@@ -31,6 +31,11 @@ def mock_generate(images=None, response=""):
     return m
 
 
+def side_effects(*mocks):
+    """Return mocks in sequence as a side_effect list."""
+    return list(mocks)
+
+
 # --- /api/optimize ---
 
 class TestOptimize:
@@ -137,18 +142,40 @@ class TestGenerate:
         assert "README" in resp.get_json()["error"]
 
     def test_returns_image_from_images_field(self, client):
-        mock = mock_generate(images=["base64data"])
-        with patch("app.requests.post", return_value=mock):
+        with patch("app.requests.post", side_effect=side_effects(
+            mock_chat("fluffy-cat"), mock_generate(images=["base64data"])
+        )):
             resp = client.post("/api/generate", json={"prompt": "a cat"})
         assert resp.status_code == 200
-        assert resp.get_json() == {"image": "base64data"}
+        data = resp.get_json()
+        assert data["image"] == "base64data"
+        assert data["title"] == "fluffy-cat"
 
     def test_returns_image_from_response_field(self, client):
-        mock = mock_generate(response="base64data")
-        with patch("app.requests.post", return_value=mock):
+        with patch("app.requests.post", side_effect=side_effects(
+            mock_chat("fluffy-cat"), mock_generate(response="base64data")
+        )):
             resp = client.post("/api/generate", json={"prompt": "a cat"})
         assert resp.status_code == 200
-        assert resp.get_json() == {"image": "base64data"}
+        data = resp.get_json()
+        assert data["image"] == "base64data"
+
+    def test_title_is_slugified(self, client):
+        with patch("app.requests.post", side_effect=side_effects(
+            mock_chat("A Cat In Sunlight!"), mock_generate(images=["x"])
+        )):
+            resp = client.post("/api/generate", json={"prompt": "a cat in sunlight"})
+        assert resp.get_json()["title"] == "a-cat-in-sunlight"
+
+    def test_title_falls_back_when_title_call_fails(self, client):
+        import requests as req
+        with patch("app.requests.post", side_effect=[
+            req.exceptions.ConnectionError(),
+            mock_generate(images=["x"]),
+        ]):
+            resp = client.post("/api/generate", json={"prompt": "a cat"})
+        assert resp.status_code == 200
+        assert resp.get_json()["title"] == "generated-image"
 
     def test_ollama_connection_error_returns_502(self, client):
         import requests as req
@@ -172,8 +199,9 @@ class TestGenerate:
         before_static = set(os.listdir(static_dir))
         before_tmp = set(os.listdir(tmp_dir))
 
-        mock = mock_generate(images=["base64imagedata"])
-        with patch("app.requests.post", return_value=mock):
+        with patch("app.requests.post", side_effect=side_effects(
+            mock_chat("a-cat"), mock_generate(images=["base64imagedata"])
+        )):
             resp = client.post("/api/generate", json={"prompt": "a cat"})
 
         assert resp.status_code == 200

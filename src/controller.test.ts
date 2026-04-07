@@ -57,7 +57,7 @@ describe("download button visibility", () => {
     beforeEach(() => {
         ui = makeUI();
         vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
-        vi.mocked(callGenerate).mockResolvedValue("iVBORabc");
+        vi.mocked(callGenerate).mockResolvedValue({ image: "iVBORabc", title: "fluffy-cat-sunlight" });
     });
 
     it("is hidden before any generation", () => {
@@ -71,6 +71,21 @@ describe("download button visibility", () => {
 
         ui.generateBtn.click();
         await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
+    });
+
+    it("uses the ollama-generated title as the download filename", async () => {
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
+
+        const anchor = { href: "", download: "", click: vi.fn() };
+        vi.spyOn(document, "createElement").mockReturnValueOnce(anchor as unknown as HTMLAnchorElement);
+        controller.download();
+
+        expect(anchor.download).toBe("fluffy-cat-sunlight");
     });
 });
 

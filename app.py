@@ -1,5 +1,6 @@
 import os
 import random
+import re
 
 import requests
 from dotenv import load_dotenv
@@ -32,6 +33,16 @@ SAFETY_ONLY_PROMPT = (
     "User: test → SAFE"
 )
 
+TITLE_PROMPT = (
+    "You are a filename generator for AI-generated images. "
+    "Given an image description, respond with only a short filename: "
+    "2–5 lowercase words joined by hyphens, no extension, no punctuation. "
+    "Examples:\n"
+    "User: a fluffy cat in warm sunlight → fluffy-cat-sunlight\n"
+    "User: mountain landscape at dusk → mountain-landscape-dusk\n"
+    "User: test → test-image"
+)
+
 OPTIMIZE_PROMPT = (
     "You are a prompt optimizer for an AI image generation tool. "
     "Your only valid responses are the single word BLOCKED or an "
@@ -47,6 +58,12 @@ OPTIMIZE_PROMPT = (
     "User: test → A technical test pattern with geometric shapes "
     "and vibrant primary colors on a white background"
 )
+
+
+def _slugify(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r'[^a-z0-9]+', '-', text)
+    return text.strip('-')[:60] or "generated-image"
 
 
 def ollama_url(path):
@@ -145,6 +162,21 @@ def generate():
     if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
 
+    title_resp, title_err = ollama_post(
+        ollama_url("/api/chat"),
+        json={
+            "model": PROMPT_MODEL,
+            "stream": False,
+            "messages": [
+                {"role": "system", "content": TITLE_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+        },
+    )
+    title = "generated-image"
+    if not title_err:
+        title = _slugify(title_resp.json()["message"]["content"])
+
     resp, err = ollama_post(
         ollama_url("/api/generate"),
         json={"model": IMAGE_MODEL, "prompt": prompt, "stream": False},
@@ -158,7 +190,7 @@ def generate():
         images[0] if images
         else body.get("image", body.get("response", ""))
     )
-    return jsonify({"image": image_data})
+    return jsonify({"image": image_data, "title": title})
 
 
 if __name__ == "__main__":

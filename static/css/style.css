@@ -68,13 +68,17 @@ html, body {
     color: var(--text);
     font-family: system-ui, sans-serif;
     font-size: 14px;
+    display: flex;
+    flex-direction: column;
 }
 
 .app {
     position: relative;
     width: 100%;
-    height: 100vh;
+    flex: 1;
     overflow: hidden;
+    max-width: 1280px;
+    margin: 0 auto;
 }
 
 /* Image area — fills full viewport */
@@ -83,7 +87,7 @@ html, body {
     position: absolute;
     inset: 0;
     display: flex;
-    padding-top: 78px; /* height of prompt bar */
+    margin-top: 132px;
     justify-content: center;
     overflow: hidden;
 }
@@ -179,12 +183,13 @@ html, body {
 
 .prompt-bar {
     position: absolute;
-    top: 0;
+    top: 32px;
     left: 0;
     right: 0;
     z-index: 100;
     background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius) ;
 }
 
 .prompt-bar-header {
@@ -198,6 +203,10 @@ html, body {
     width: 24px;
     height: 24px;
     margin: 0 16px;
+}
+
+body:has(#loading-overlay:not(.hidden)) .logo {
+    animation: spin 0.85s linear infinite;
 }
 
 .prompt-toggle {
@@ -315,6 +324,25 @@ button:hover:not(:disabled) {
 
 .download-btn:hover:not(:disabled) {
     opacity: 1;
+}
+
+/* Footer */
+
+footer {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+footer a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
 }
 
 /* Utilities */

@@ -128,7 +128,7 @@ textarea#prompt:focus {
 
 /* Mobile */
 
-@media (max-width: 640px) {
+@media (width <= 640px) {
     .prompt-bar {
         top: 0;
         border-left: none;
@@ -154,6 +154,7 @@ textarea#prompt:focus {
         width: 100%;
         display: flex;
         justify-content: space-evenly;
+
         button {
             flex: 1;
             max-width: none;

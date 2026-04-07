@@ -8,7 +8,6 @@ export interface UI {
     optimizeBtn:            HTMLButtonElement;
     promptBar:              HTMLDivElement;
     promptToggle:           HTMLButtonElement;
-    placeholder:            HTMLDivElement;
     imageContainer:         HTMLDivElement;
     generatedImage:         HTMLImageElement;
     loadingOverlay:         HTMLDivElement;

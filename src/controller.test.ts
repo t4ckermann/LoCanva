@@ -19,7 +19,6 @@ function makeUI(): UI {
         <button id="optimize-btn"></button>
         <div id="prompt-bar" class="expanded"></div>
         <button id="prompt-toggle"></button>
-        <div id="placeholder"></div>
         <div id="image-container" class="hidden">
             <img id="generated-image" />
             <button id="download-btn"></button>
@@ -37,7 +36,6 @@ function makeUI(): UI {
         optimizeBtn:            document.getElementById("optimize-btn")             as HTMLButtonElement,
         promptBar:              document.getElementById("prompt-bar")               as HTMLDivElement,
         promptToggle:           document.getElementById("prompt-toggle")            as HTMLButtonElement,
-        placeholder:            document.getElementById("placeholder")              as HTMLDivElement,
         imageContainer:         document.getElementById("image-container")          as HTMLDivElement,
         generatedImage:         document.getElementById("generated-image")          as HTMLImageElement,
         loadingOverlay:         document.getElementById("loading-overlay")          as HTMLDivElement,

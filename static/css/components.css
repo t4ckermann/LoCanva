@@ -33,7 +33,7 @@ button:hover:not(:disabled) {
 
 /* Mobile */
 
-@media (max-width: 640px) {
+@media (width <= 640px) {
     .buttons {
         flex-direction: row;
     }
@@ -70,7 +70,7 @@ button:hover:not(:disabled) {
     align-items: center;
     justify-content: center;
     gap: 16px;
-    background: var(--overlay-bg);
+    background: var(--bg);
 }
 
 .loading-overlay-spinner {

@@ -12,8 +12,8 @@ is_running() {
 
 start() {
     if is_running; then
-        echo "Already running (PID $(cat "$PID_FILE"))"
-        return
+        echo "Already running (PID $(cat "$PID_FILE")), restarting…"
+        stop
     fi
     nohup "$PYTHON" "$DIR/app.py" >> "$LOG_FILE" 2>&1 &
     echo $! > "$PID_FILE"

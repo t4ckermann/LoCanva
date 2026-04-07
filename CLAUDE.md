@@ -45,6 +45,16 @@ pytest tests/
 
 When adding or changing backend functionality, add or update tests in `tests/test_app.py` to cover the new behaviour. Every new route, branch, or error case should have a corresponding test.
 
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`). The version is stored in `package.json`.
+
+- **Bug fix** → increment `PATCH` (e.g. `0.8.1` → `0.8.2`). Do this automatically when fixing a bug.
+- **New feature** → increment `MINOR` and reset `PATCH` to `0` (e.g. `0.8.1` → `0.9.0`). Do this automatically when implementing a new feature.
+- **Breaking change** → increment `MAJOR` — **this is the user's decision only, never do it automatically**.
+
+After bumping the version in `package.json`, remind the user to create a GitHub Release for the new version.
+
 ## Architecture
 
 - **`app.py`** — Flask entrypoint. Serves `templates/index.html` at `/`. Talks to Ollama via `OLLAMA_BASE_URL`. Config via env vars (supports `.env`).

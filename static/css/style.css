@@ -194,8 +194,8 @@ html, body {
 
 .logo {
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: conic-gradient(
         #ffb3ba, #ffd9b3, #fffbb3, #b3f5cc,
@@ -228,7 +228,7 @@ html, body {
 #theme-toggle {
     position: absolute;
     right: 16px;
-    top: 2px;
+    top: 8px;
     font-size: 15px;
     line-height: 1;
 }

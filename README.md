@@ -39,6 +39,17 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Pre-commit hook
+
+Tests run automatically before every commit. The Claude Code hook (`.hooks/settings.json`) covers AI commits. For human commits, run once after cloning:
+
+```bash
+git config core.hooksPath .hooks
+chmod +x .hooks/pre-commit
+```
+
+> The hook requires nvm to be installed.
+
 ## Running
 
 ```bash

@@ -1,3 +1,4 @@
+const themeToggle = document.getElementById("theme-toggle") as HTMLButtonElement;
 const promptEl = document.getElementById("prompt") as HTMLTextAreaElement;
 const generateBtn = document.getElementById("generate-btn") as HTMLButtonElement;
 const optimizeBtn = document.getElementById("optimize-btn") as HTMLButtonElement;
@@ -10,6 +11,17 @@ const loadingMsg = document.getElementById("loading-msg") as HTMLSpanElement;
 const optimizedPromptDisplay = document.getElementById("optimized-prompt-display") as HTMLDivElement;
 const blockedMsg = document.getElementById("blocked-msg") as HTMLDivElement;
 const errorMsg = document.getElementById("error-msg") as HTMLDivElement;
+const savedTheme = localStorage.getItem("theme") ?? "dark";
+
+let isRunning = false;
+
+function applyTheme(theme: string): void {
+    document.documentElement.setAttribute("data-theme", theme);
+    const isLight = theme === "light";
+    themeToggle.textContent = isLight ? "🌙" : "☀️";
+    themeToggle.setAttribute("aria-label", isLight ? "Switch to dark mode" : "Switch to light mode");
+    themeToggle.title = isLight ? "Switch to dark mode" : "Switch to light mode";
+}
 
 function b64Mime(b64: string): string {
     if (b64.startsWith("/9j/"))   return "image/jpeg";
@@ -22,10 +34,6 @@ function setExpanded(expanded: boolean): void {
     promptBar.classList.toggle("expanded", expanded);
     promptToggle.setAttribute("aria-expanded", String(expanded));
 }
-
-promptToggle.addEventListener("click", () => {
-    setExpanded(!promptBar.classList.contains("expanded"));
-});
 
 function setLoading(active: boolean, msg?: string): void {
     if (active) {
@@ -69,8 +77,6 @@ async function callGenerate(prompt: string): Promise<string> {
     return data.image as string;
 }
 
-let isRunning = false;
-
 async function run(optimize: boolean): Promise<void> {
     const prompt = promptEl.value.trim();
     if (!prompt || isRunning) return;
@@ -110,11 +116,24 @@ async function run(optimize: boolean): Promise<void> {
     }
 }
 
+themeToggle.addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+    localStorage.setItem("theme", next);
+    applyTheme(next);
+});
+promptToggle.addEventListener("click", () => {
+    setExpanded(!promptBar.classList.contains("expanded"));
+});
 generateBtn.addEventListener("click", () => run(false));
 optimizeBtn.addEventListener("click", () => run(true));
-
 promptEl.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
         run(false);
     }
 });
+
+
+applyTheme(savedTheme);
+
+
+

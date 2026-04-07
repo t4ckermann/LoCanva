@@ -18,7 +18,8 @@ let isRunning = false;
 function applyTheme(theme: string): void {
     document.documentElement.setAttribute("data-theme", theme);
     const isLight = theme === "light";
-    themeToggle.textContent = isLight ? "🌙" : "☀️";
+    const icon = isLight ? "dark_mode" : "light_mode";
+    themeToggle.innerHTML = `<span class="material-icon">${icon}</span>`;
     themeToggle.setAttribute("aria-label", isLight ? "Switch to dark mode" : "Switch to light mode");
     themeToggle.title = isLight ? "Switch to dark mode" : "Switch to light mode";
 }

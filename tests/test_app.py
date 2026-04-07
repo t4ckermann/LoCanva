@@ -54,7 +54,34 @@ class TestOptimize:
                 json={"prompt": "explicit content", "optimize": False},
             )
         assert resp.status_code == 200
-        assert resp.get_json() == {"blocked": True}
+        data = resp.get_json()
+        assert data["blocked"] is True
+        assert isinstance(data["message"], str) and data["message"]
+
+    def test_natural_language_refusal_is_blocked(self, client):
+        refusal = "I cannot create explicit content. Can I help you?"
+        with patch("app.requests.post", return_value=mock_chat(refusal)):
+            resp = client.post(
+                "/api/optimize",
+                json={"prompt": "explicit content", "optimize": True},
+            )
+        data = resp.get_json()
+        assert data["blocked"] is True
+        assert isinstance(data["message"], str) and data["message"]
+
+    def test_blocked_response_has_no_optimized_field(self, client):
+        # Frontend uses `data.blocked` to stop generation — verify the
+        # response never includes an `optimized` field when blocked, so
+        # there is no ambiguous value the frontend could accidentally use
+        # as a generation prompt.
+        with patch("app.requests.post", return_value=mock_chat("BLOCKED")):
+            resp = client.post(
+                "/api/optimize",
+                json={"prompt": "explicit content", "optimize": True},
+            )
+        data = resp.get_json()
+        assert data["blocked"] is True
+        assert "optimized" not in data
 
     def test_optimize_returns_improved_prompt(self, client):
         improved = "A majestic cat sitting on a golden throne"
@@ -72,7 +99,9 @@ class TestOptimize:
                 json={"prompt": "explicit content", "optimize": True},
             )
         assert resp.status_code == 200
-        assert resp.get_json() == {"blocked": True}
+        data = resp.get_json()
+        assert data["blocked"] is True
+        assert isinstance(data["message"], str) and data["message"]
 
     def test_ollama_connection_error_returns_502(self, client):
         import requests as req

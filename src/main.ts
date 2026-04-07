@@ -42,9 +42,39 @@ function resetMessages(): void {
     optimizedPromptDisplay.classList.add("hidden");
 }
 
+async function callOptimize(prompt: string, optimize: boolean): Promise<string | null> {
+    const resp = await fetch("/api/optimize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, optimize }),
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    if (data.blocked) {
+        blockedMsg.textContent = data.message ?? "Not happening.";
+        blockedMsg.classList.remove("hidden");
+        return null;
+    }
+    return data.optimized ?? prompt;
+}
+
+async function callGenerate(prompt: string): Promise<string> {
+    const resp = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    return data.image as string;
+}
+
+let isRunning = false;
+
 async function run(optimize: boolean): Promise<void> {
     const prompt = promptEl.value.trim();
-    if (!prompt) return;
+    if (!prompt || isRunning) return;
+    isRunning = true;
 
     resetMessages();
     setLoading(true, optimize ? "Optimizing prompt…" : "Checking prompt…");
@@ -52,52 +82,29 @@ async function run(optimize: boolean): Promise<void> {
     optimizeBtn.disabled = true;
 
     try {
-        const optResp = await fetch("/api/optimize", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt, optimize }),
-        });
-        const optData = await optResp.json();
+        const finalPrompt = await callOptimize(prompt, optimize);
+        if (finalPrompt === null) return;
 
-        if (optData.blocked) {
-            setLoading(false);
-            blockedMsg.classList.remove("hidden");
-            return;
-        }
-
-        const finalPrompt: string = optData.optimized ?? prompt;
-
-        if (optimize && optData.optimized) {
-            optimizedPromptDisplay.textContent = `Optimized Prompt: ${optData.optimized}`;
+        if (optimize && finalPrompt !== prompt) {
+            optimizedPromptDisplay.textContent = `Optimized Prompt: ${finalPrompt}`;
             optimizedPromptDisplay.classList.remove("hidden");
         }
 
         setLoading(true, "Generating image — this may take a while…");
-
-        const genResp = await fetch("/api/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: finalPrompt }),
-        });
-        const genData = await genResp.json();
-
-        setLoading(false);
-
-        if (genData.error) {
-            errorMsg.textContent = genData.error;
-            errorMsg.classList.remove("hidden");
-            return;
-        }
+        const image = await callGenerate(finalPrompt);
 
         placeholder.classList.add("hidden");
-        generatedImage.src = `data:${b64Mime(genData.image)};base64,${genData.image}`;
+        generatedImage.src = `data:${b64Mime(image)};base64,${image}`;
         generatedImage.classList.remove("hidden");
         setExpanded(false);
-    } catch {
-        setLoading(false);
-        errorMsg.textContent = "Something went wrong. Is Ollama running?";
+    } catch (err) {
+        errorMsg.textContent = err instanceof Error
+            ? err.message
+            : "Something went wrong. Is Ollama running?";
         errorMsg.classList.remove("hidden");
     } finally {
+        isRunning = false;
+        setLoading(false);
         generateBtn.disabled = false;
         optimizeBtn.disabled = false;
     }

@@ -1,4 +1,5 @@
 import os
+import random
 
 import requests
 from dotenv import load_dotenv
@@ -19,28 +20,61 @@ if not IMAGE_MODEL:
     )
 
 SAFETY_ONLY_PROMPT = (
-    "You are a safety checker for an AI image generation tool.\n\n"
-    "Respond with exactly BLOCKED only if the prompt explicitly requests "
+    "You are a safety checker for an AI image generation tool. "
+    "Your only valid responses are the single word SAFE or the single "
+    "word BLOCKED — nothing else, no punctuation, no explanation.\n\n"
+    "Respond with BLOCKED only if the prompt explicitly requests "
     "pornographic or sexual content, nudity, or deepfakes. "
-    "Do NOT block for any other reason.\n"
-    "Otherwise, respond with exactly: SAFE"
+    "Respond with SAFE for everything else.\n\n"
+    "Examples:\n"
+    "User: a cat → SAFE\n"
+    "User: naked people → BLOCKED\n"
+    "User: test → SAFE"
 )
 
 OPTIMIZE_PROMPT = (
-    "You are a prompt optimizer for an AI image generation tool meant "
-    "for creative work.\n\n"
-    "Your job:\n"
-    "1. Respond with exactly BLOCKED only if the prompt explicitly requests "
+    "You are a prompt optimizer for an AI image generation tool. "
+    "Your only valid responses are the single word BLOCKED or an "
+    "improved image generation prompt — no explanations, no 'I', "
+    "no meta-commentary, no preamble.\n\n"
+    "Respond with BLOCKED only if the prompt explicitly requests "
     "pornographic or sexual content, nudity, or deepfakes. "
-    "Do NOT block for any other reason, including vague or simple prompts.\n"
-    "2. For ALL other prompts, rewrite them to be more descriptive and vivid "
-    "for image generation. Respond with only the improved prompt — "
-    "no explanation, no preamble."
+    "For ALL other prompts, respond with only the improved prompt.\n\n"
+    "Examples:\n"
+    "User: cat → A fluffy tabby cat in warm afternoon sunlight, "
+    "detailed fur, shallow depth of field\n"
+    "User: naked people → BLOCKED\n"
+    "User: test → A technical test pattern with geometric shapes "
+    "and vibrant primary colors on a white background"
 )
 
 
 def ollama_url(path):
     return f"{OLLAMA_BASE_URL.rstrip('/')}{path}"
+
+
+_BLOCK_MESSAGES = [
+    "This is LoCanva, not PornCanva. Try a sunset instead.",
+    "Absolutely not. Your GPU deserves better.",
+    "Nice try. Go touch some grass.",
+    "Not today. Not ever. Respect boundaries, even digital ones.",
+    "The model said no. So did I.",
+    "Bro. No. Just no.",
+    "I was built for art, not objectification. Elevate your game.",
+]
+
+
+_REFUSAL_PREFIXES = (
+    "blocked",
+    "i cannot", "i can't", "i won't", "i will not",
+    "i'm unable", "i am unable", "i'm sorry", "i am sorry",
+    "sorry,", "sorry.", "apologies,",
+)
+
+
+def _is_refusal(text: str) -> bool:
+    lower = text.lower()
+    return any(lower.startswith(p) for p in _REFUSAL_PREFIXES)
 
 
 def ollama_post(url, **kwargs):
@@ -86,8 +120,11 @@ def optimize():
 
     content = resp.json()["message"]["content"].strip()
 
-    if content.upper().startswith("BLOCKED"):
-        return jsonify({"blocked": True})
+    if _is_refusal(content):
+        return jsonify({
+            "blocked": True,
+            "message": random.choice(_BLOCK_MESSAGES),
+        })
     if not do_optimize:
         return jsonify({"optimized": None})
     return jsonify({"optimized": content})

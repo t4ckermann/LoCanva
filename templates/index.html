@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LoCanva</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" type="image/svg+xml" href="/static/assets/logo.svg">
 </head>
 <body>
     <div class="app">
         <div class="prompt-bar expanded" id="prompt-bar">
             <div class="prompt-bar-header">
-                <div class="logo" aria-hidden="true"></div>
+                <img class="logo" src="/static/assets/logo.svg" alt="LoCanva" aria-hidden="true">
                 <button class="prompt-toggle" id="prompt-toggle" aria-expanded="true">
                     <span class="material-icon">edit</span> Describe your image
                 </button>
@@ -33,7 +34,7 @@
                 </button>
             </div>
             <div id="loading-overlay" class="loading-overlay hidden">
-                <div class="loading-overlay-spinner"></div>
+                <img class="loading-overlay-spinner" src="/static/assets/logo.svg" alt="">
                 <span id="loading-msg">Generating image…</span>
                 <div id="optimized-prompt-display" class="optimized-prompt hidden"></div>
             </div>

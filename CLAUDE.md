@@ -53,7 +53,7 @@ This project follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PA
 - **New feature** → increment `MINOR` and reset `PATCH` to `0` (e.g. `0.8.1` → `0.9.0`). Do this automatically when implementing a new feature.
 - **Breaking change** → increment `MAJOR` — **this is the user's decision only, never do it automatically**.
 
-After bumping the version in `package.json`, remind the user to create a GitHub Release for the new version.
+**This is mandatory and must not be skipped.** Update `package.json` as part of the same task, before marking it done. After bumping the version, remind the user to create a GitHub Release for the new version.
 
 ## Architecture
 

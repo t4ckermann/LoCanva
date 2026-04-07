@@ -121,14 +121,8 @@ html, body {
 }
 
 .loading-overlay-spinner {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: conic-gradient(
-        #ffb3ba, #ffd9b3, #fffbb3, #b3f5cc,
-        #b3d9ff, #c9b8ff, #f5b3ff, #ffb3ba
-    );
-    mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+    width: 64px;
+    height: 64px;
     animation: spin 0.85s linear infinite;
 }
 
@@ -201,14 +195,9 @@ html, body {
 
 .logo {
     flex-shrink: 0;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: conic-gradient(
-        #ffb3ba, #ffd9b3, #fffbb3, #b3f5cc,
-        #b3d9ff, #c9b8ff, #f5b3ff, #ffb3ba
-    );
-    margin:0 16px;
+    width: 24px;
+    height: 24px;
+    margin: 0 16px;
 }
 
 .prompt-toggle {

@@ -205,7 +205,6 @@ html, body {
 }
 
 .prompt-toggle {
-    flex: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -227,9 +226,9 @@ html, body {
 }
 
 #theme-toggle {
-    flex-shrink: 0;
-    padding: 6px 12px;
-    margin-right: 8px;
+    position: absolute;
+    right: 16px;
+    top: 2px;
     font-size: 15px;
     line-height: 1;
 }

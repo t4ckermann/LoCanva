@@ -123,7 +123,9 @@ themeToggle.addEventListener("click", () => {
     applyTheme(next);
 });
 promptToggle.addEventListener("click", () => {
-    setExpanded(!promptBar.classList.contains("expanded"));
+    const expanding = !promptBar.classList.contains("expanded");
+    setExpanded(expanding);
+    if (expanding) promptEl.focus();
 });
 generateBtn.addEventListener("click", () => run(false));
 optimizeBtn.addEventListener("click", () => run(true));

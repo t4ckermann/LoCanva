@@ -43,14 +43,17 @@ def ollama_url(path):
     return f"{OLLAMA_BASE_URL.rstrip('/')}{path}"
 
 
-def ollama_error(e):
-    resp = getattr(e, "response", None)
-    status = getattr(resp, "status_code", None) if resp else None
-    if status == 404:
-        return "Model not found in Ollama. Is it pulled?"
-    if status is not None:
-        return f"Ollama error: HTTP {status}"
-    return "Cannot reach Ollama. Is it running?"
+def ollama_post(url, **kwargs):
+    """Wrapper around requests.post with structured error handling."""
+    try:
+        resp = requests.post(url, **kwargs)
+    except requests.exceptions.RequestException:
+        return None, {"error": "Cannot reach Ollama. Is it running?"}
+    if resp.status_code == 404:
+        return None, {"error": "Model not found in Ollama. Is it pulled?"}
+    if not resp.ok:
+        return None, {"error": f"Ollama error: HTTP {resp.status_code}"}
+    return resp, None
 
 
 @app.route("/")
@@ -67,21 +70,19 @@ def optimize():
         return jsonify({"error": "No prompt provided"}), 400
 
     system = OPTIMIZE_PROMPT if do_optimize else SAFETY_ONLY_PROMPT
-    try:
-        resp = requests.post(
-            ollama_url("/api/chat"),
-            json={
-                "model": PROMPT_MODEL,
-                "stream": False,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": prompt},
-                ],
-            },
-        )
-        resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": ollama_error(e)}), 502
+    resp, err = ollama_post(
+        ollama_url("/api/chat"),
+        json={
+            "model": PROMPT_MODEL,
+            "stream": False,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt},
+            ],
+        },
+    )
+    if err:
+        return jsonify(err), 502
 
     content = resp.json()["message"]["content"].strip()
 
@@ -94,6 +95,8 @@ def optimize():
 
 @app.route("/api/generate", methods=["POST"])
 def generate():
+    # Images are never written to disk. The base64 payload travels
+    # through memory only and is returned directly to the browser.
     if not IMAGE_MODEL:
         return jsonify({"error": (
             "IMAGE_MODEL is not set. "
@@ -105,14 +108,12 @@ def generate():
     if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
 
-    try:
-        resp = requests.post(
-            ollama_url("/api/generate"),
-            json={"model": IMAGE_MODEL, "prompt": prompt, "stream": False},
-        )
-        resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": ollama_error(e)}), 502
+    resp, err = ollama_post(
+        ollama_url("/api/generate"),
+        json={"model": IMAGE_MODEL, "prompt": prompt, "stream": False},
+    )
+    if err:
+        return jsonify(err), 502
 
     body = resp.json()
     images = body.get("images")

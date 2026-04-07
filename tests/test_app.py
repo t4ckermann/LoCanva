@@ -1,3 +1,5 @@
+import os
+import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -83,9 +85,8 @@ class TestOptimize:
         assert "Ollama" in resp.get_json()["error"]
 
     def test_ollama_404_returns_502_with_hint(self, client):
-        import requests as req
-        err = req.exceptions.HTTPError(response=MagicMock(status_code=404))
-        with patch("app.requests.post", side_effect=err):
+        mock = MagicMock(status_code=404, ok=False)
+        with patch("app.requests.post", return_value=mock):
             resp = client.post(
                 "/api/optimize", json={"prompt": "a cat", "optimize": False}
             )
@@ -129,9 +130,24 @@ class TestGenerate:
         assert "Ollama" in resp.get_json()["error"]
 
     def test_ollama_404_returns_502_with_hint(self, client):
-        import requests as req
-        err = req.exceptions.HTTPError(response=MagicMock(status_code=404))
-        with patch("app.requests.post", side_effect=err):
+        mock = MagicMock(status_code=404, ok=False)
+        with patch("app.requests.post", return_value=mock):
             resp = client.post("/api/generate", json={"prompt": "a cat"})
         assert resp.status_code == 502
         assert "pulled" in resp.get_json()["error"].lower()
+
+    def test_image_not_written_to_disk(self, client):
+        static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
+        tmp_dir = tempfile.gettempdir()
+
+        before_static = set(os.listdir(static_dir))
+        before_tmp = set(os.listdir(tmp_dir))
+
+        mock = mock_generate(images=["base64imagedata"])
+        with patch("app.requests.post", return_value=mock):
+            resp = client.post("/api/generate", json={"prompt": "a cat"})
+
+        assert resp.status_code == 200
+        assert resp.get_json()["image"] == "base64imagedata"
+        assert set(os.listdir(static_dir)) == before_static
+        assert set(os.listdir(tmp_dir)) == before_tmp

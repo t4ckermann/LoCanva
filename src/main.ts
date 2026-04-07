@@ -11,6 +11,13 @@ const optimizedPromptDisplay = document.getElementById("optimized-prompt-display
 const blockedMsg = document.getElementById("blocked-msg") as HTMLDivElement;
 const errorMsg = document.getElementById("error-msg") as HTMLDivElement;
 
+function b64Mime(b64: string): string {
+    if (b64.startsWith("/9j/"))   return "image/jpeg";
+    if (b64.startsWith("R0lGOD")) return "image/gif";
+    if (b64.startsWith("UklGR"))  return "image/webp";
+    return "image/png";
+}
+
 function setExpanded(expanded: boolean): void {
     promptBar.classList.toggle("expanded", expanded);
     promptToggle.setAttribute("aria-expanded", String(expanded));
@@ -61,7 +68,7 @@ async function run(optimize: boolean): Promise<void> {
         const finalPrompt: string = optData.optimized ?? prompt;
 
         if (optimize && optData.optimized) {
-            optimizedPromptDisplay.textContent = `Optimized: ${optData.optimized}`;
+            optimizedPromptDisplay.textContent = `Optimized Prompt: ${optData.optimized}`;
             optimizedPromptDisplay.classList.remove("hidden");
         }
 
@@ -83,7 +90,7 @@ async function run(optimize: boolean): Promise<void> {
         }
 
         placeholder.classList.add("hidden");
-        generatedImage.src = `data:image/png;base64,${genData.image}`;
+        generatedImage.src = `data:${b64Mime(genData.image)};base64,${genData.image}`;
         generatedImage.classList.remove("hidden");
         setExpanded(false);
     } catch {

@@ -117,7 +117,10 @@ def generate():
 
     body = resp.json()
     images = body.get("images")
-    image_data = images[0] if images else body.get("response", "")
+    image_data = (
+        images[0] if images
+        else body.get("image", body.get("response", ""))
+    )
     return jsonify({"image": image_data})
 
 

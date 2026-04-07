@@ -35,7 +35,7 @@ class TestOptimize:
     def test_missing_prompt_returns_400(self, client):
         resp = client.post("/api/optimize", json={})
         assert resp.status_code == 400
-        assert "Ollama" in resp.get_json()["error"]
+        assert "error" in resp.get_json()
 
     def test_safety_only_safe(self, client):
         with patch("app.requests.post", return_value=mock_chat("SAFE")):

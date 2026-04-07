@@ -61,9 +61,15 @@ describe("callOptimize", () => {
 describe("callGenerate", () => {
     beforeEach(() => mockFetch.mockReset());
 
-    it("returns base64 image string", async () => {
+    it("returns image and title", async () => {
+        mockFetch.mockReturnValue(jsonResponse({ image: "abc123==", title: "fluffy-cat" }));
+        await expect(callGenerate("a cat")).resolves.toEqual({ image: "abc123==", title: "fluffy-cat" });
+    });
+
+    it("falls back to generated-image when title is missing", async () => {
         mockFetch.mockReturnValue(jsonResponse({ image: "abc123==" }));
-        await expect(callGenerate("a cat")).resolves.toBe("abc123==");
+        const result = await callGenerate("a cat");
+        expect(result.title).toBe("generated-image");
     });
 
     it("throws on server error", async () => {
@@ -72,7 +78,7 @@ describe("callGenerate", () => {
     });
 
     it("sends prompt in request body", async () => {
-        mockFetch.mockReturnValue(jsonResponse({ image: "x" }));
+        mockFetch.mockReturnValue(jsonResponse({ image: "x", title: "t" }));
         await callGenerate("a red barn");
         expect(mockFetch).toHaveBeenCalledWith("/api/generate", expect.objectContaining({
             body: JSON.stringify({ prompt: "a red barn" }),

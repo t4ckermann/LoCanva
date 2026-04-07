@@ -31,6 +31,14 @@ button:hover:not(:disabled) {
     color: var(--accent);
 }
 
+/* Mobile */
+
+@media (max-width: 640px) {
+    .buttons {
+        flex-direction: row;
+    }
+}
+
 /* Download button */
 
 .download-btn {

@@ -42,6 +42,7 @@
     --error-bg: #1a1018;
     --error-border: #3a1a2a;
     --error-text: #f5a0c0;
+    --border-radius: 4px;    
 }
 
 [data-theme="light"] {
@@ -138,7 +139,7 @@ html, body {
     padding: 10px 14px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--border-radius);
     color: var(--text-muted);
     font-size: 12px;
     line-height: 1.5;
@@ -154,7 +155,7 @@ html, body {
     left: 50%;
     transform: translateX(-50%);
     padding: 10px 16px;
-    border-radius: 6px;
+    border-radius: var(--border-radius);
     font-size: 13px;
     text-align: center;
     max-width: 480px;
@@ -188,12 +189,13 @@ html, body {
 .prompt-bar-header {
     display: flex;
     align-items: center;
+    min-height: 64px;
 }
 
 .logo {
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: conic-gradient(
         #ffb3ba, #ffd9b3, #fffbb3, #b3f5cc,
@@ -207,20 +209,26 @@ html, body {
     align-items: center;
     justify-content: space-between;
     padding: 10px 16px;
-    background: none;
-    border: none;
-    border-radius: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
     color: var(--text-muted);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 13px;
     transition: color 0.15s;
+    &:hover:not(:disabled) {
+        border-color: var(--border);
+    }
+}
+
+.prompt-bar:not(.expanded) {
+    .prompt-toggle {
+        background: none;
+        border: none;
+    }
 }
 
 #theme-toggle {
     position: absolute;
     right: 16px;
-    top: 2px;
+    top: 8px;
     font-size: 15px;
     line-height: 1;
 }
@@ -229,14 +237,7 @@ html, body {
     color: var(--text);
 }
 
-.toggle-icon {
-    transition: transform 0.2s;
-    display: inline-block;
-}
 
-.prompt-bar:not(.expanded) .toggle-icon {
-    transform: rotate(-90deg);
-}
 
 .prompt-content {
     padding: 0 16px 14px;
@@ -253,7 +254,7 @@ textarea#prompt {
     flex: 1;
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--border-radius);
     color: var(--text);
     font-family: inherit;
     font-size: 14px;
@@ -261,6 +262,8 @@ textarea#prompt {
     resize: none;
     line-height: 1.5;
     outline: none;
+    z-index: 150;
+    min-height: 104px;
 }
 
 textarea#prompt:focus {
@@ -270,20 +273,22 @@ textarea#prompt:focus {
 .buttons {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 
 button {
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--border-radius);
     color: var(--text);
     cursor: pointer;
     font-family: inherit;
-    font-size: 13px;
-    padding: 7px 14px;
+    font-size: 12px;
+    padding: 8px 16px;
     white-space: nowrap;
     transition: border-color 0.15s, color 0.15s;
+    min-height: 48px;
+    gap: 8px;
 }
 
 button:disabled {

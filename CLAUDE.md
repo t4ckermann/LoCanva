@@ -33,6 +33,16 @@ After creating or modifying **any** code file, always run the appropriate linter
 
 Do not skip linting. If a linter is not yet installed, install it first.
 
+## Testing (mandatory)
+
+After any change to `app.py` or `tests/`, always run the test suite and fix all failures before considering the task done:
+
+```bash
+pytest tests/
+```
+
+When adding or changing backend functionality, add or update tests in `tests/test_app.py` to cover the new behaviour. Every new route, branch, or error case should have a corresponding test.
+
 ## Architecture
 
 - **`app.py`** — Flask entrypoint. Serves `templates/index.html` at `/`. Talks to Ollama via `OLLAMA_BASE_URL`. Config via env vars (supports `.env`).

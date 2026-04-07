@@ -1,0 +1,232 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #111;
+    --surface: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --text-muted: #777;
+    --accent: #c9b8ff;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+}
+
+.app {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Image area — fills full viewport */
+
+.image-area {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.placeholder {
+    color: var(--text-muted);
+    font-size: 15px;
+}
+
+#generated-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* Loading overlay */
+
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: rgb(17 17 17 / 85%);
+}
+
+.loading-overlay-spinner {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: conic-gradient(
+        #ffb3ba, #ffd9b3, #fffbb3, #b3f5cc,
+        #b3d9ff, #c9b8ff, #f5b3ff, #ffb3ba
+    );
+    mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+    animation: spin 0.85s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+#loading-msg {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.optimized-prompt {
+    max-width: 480px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+/* Messages */
+
+.blocked-msg,
+.error-msg {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    text-align: center;
+    max-width: 480px;
+    width: max-content;
+}
+
+.blocked-msg {
+    background: #1f1410;
+    border: 1px solid #4a2a1a;
+    color: #f5a97f;
+}
+
+.error-msg {
+    background: #1a1018;
+    border: 1px solid #3a1a2a;
+    color: #f5a0c0;
+}
+
+/* Prompt bar — overlays image area from the top */
+
+.prompt-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.prompt-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    border-radius: 0;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    transition: color 0.15s;
+}
+
+.prompt-toggle:hover:not(:disabled) {
+    color: var(--text);
+}
+
+.toggle-icon {
+    transition: transform 0.2s;
+    display: inline-block;
+}
+
+.prompt-bar:not(.expanded) .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+.prompt-content {
+    padding: 0 16px 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.prompt-bar:not(.expanded) .prompt-content {
+    display: none;
+}
+
+textarea#prompt {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    resize: none;
+    line-height: 1.5;
+    outline: none;
+}
+
+textarea#prompt:focus {
+    border-color: var(--accent);
+}
+
+.buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+button {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 14px;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Utilities */
+
+.hidden {
+    display: none !important;
+}

@@ -20,7 +20,7 @@ Follow these principles in all code:
 
 See [README.md](README.md) for setup, running, and configuration.
 
-LoCanva is a locally-hosted canvas app powered by Ollama. Flask backend (`app.py`) serves a single HTML page and proxies to Ollama. TypeScript frontend (`src/`) compiles to `static/js/`.
+LoCanva is a locally-hosted canvas app powered by Ollama. FastAPI backend (`app.py`) serves a single HTML page and proxies to Ollama. TypeScript frontend (`src/`) compiles to `static/js/`.
 
 ## Commands
 
@@ -43,6 +43,8 @@ After creating or modifying **any** code file, always run the appropriate linter
 
 Do not skip linting. If a linter is not yet installed, install it first.
 
+ESLint enforces a cyclomatic complexity limit of 8 and a maximum of 30 lines per function. When a violation is reported, split the function or extract helpers — do not raise the limit. If a file grows large, split it by responsibility into separate modules under `src/`.
+
 After any edit, also remove dead code — unused variables, functions, imports, CSS rules, and HTML elements that are no longer referenced. Dead code must not accumulate.
 
 ## Testing (mandatory)
@@ -55,7 +57,7 @@ pytest tests/
 
 When adding or changing backend functionality, add or update tests in `tests/test_app.py` to cover the new behaviour. Every new route, branch, or error case should have a corresponding test.
 
-## Versioning
+## Versioning (mandatory)
 
 This project follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`). The version is stored in `package.json`.
 
@@ -65,8 +67,13 @@ This project follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PA
 
 **This is mandatory and must not be skipped.** Update `package.json` as part of the same task, before marking it done. After bumping the version, remind the user to create a GitHub Release for the new version.
 
+## Dependencies (mandatory)
+
+When adding a new Python library, always add it to `requirements.txt` in the same task. FastAPI does not bundle optional dependencies (e.g. `jinja2`, `python-multipart`) — they must be listed explicitly.
+
 ## Architecture
 
-- **`app.py`** — Flask entrypoint. Serves `templates/index.html` at `/`. Talks to Ollama via `OLLAMA_BASE_URL`. Config via env vars (supports `.env`).
+- **`app.py`** — FastAPI entrypoint. Serves `templates/index.html` at `/`. Talks to Ollama via `OLLAMA_BASE_URL`. Config via env vars (supports `.env`).
 - **`src/`** — TypeScript source. Strict mode, `noUnusedLocals`/`noUnusedParameters` enforced. Compiles to `static/js/` (ESNext modules — do not edit compiled output).
-- **`templates/index.html`** — Single page. Loads `static/css/style.css` and `static/js/main.js`.
+- **`templates/index.html`** — Single page. Loads CSS from `static/css/` and `static/js/main.js`.
+- **`static/css/`** — Split into three files: `base.css` (reset, variables, typography), `layout.css` (structural layout), `components.css` (buttons, panels, reusable UI).

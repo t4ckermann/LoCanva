@@ -2,13 +2,19 @@ import os
 import random
 import re
 
-import requests
+import httpx
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 load_dotenv()
 
-app = Flask(__name__)
+app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "x/z-image-turbo")
@@ -80,7 +86,6 @@ _BLOCK_MESSAGES = [
     "I was built for art, not objectification. Elevate your game.",
 ]
 
-
 _REFUSAL_PREFIXES = (
     "blocked",
     "i cannot", "i can't", "i won't", "i will not",
@@ -94,34 +99,43 @@ def _is_refusal(text: str) -> bool:
     return any(lower.startswith(p) for p in _REFUSAL_PREFIXES)
 
 
-def ollama_post(url, **kwargs):
-    """Wrapper around requests.post with structured error handling."""
+async def ollama_post(url, **kwargs):
+    """Async wrapper around httpx with structured error handling."""
     try:
-        resp = requests.post(url, **kwargs)
-    except requests.exceptions.RequestException:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            resp = await client.post(url, **kwargs)
+    except httpx.RequestError:
         return None, {"error": "Cannot reach Ollama. Is it running?"}
     if resp.status_code == 404:
         return None, {"error": "Model not found in Ollama. Is it pulled?"}
-    if not resp.ok:
+    if not resp.is_success:
         return None, {"error": f"Ollama error: HTTP {resp.status_code}"}
     return resp, None
 
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+class OptimizeRequest(BaseModel):
+    prompt: str = ""
+    optimize: bool = False
 
 
-@app.route("/api/optimize", methods=["POST"])
-def optimize():
-    data = request.get_json()
-    prompt = (data or {}).get("prompt", "").strip()
-    do_optimize = (data or {}).get("optimize", False)
+class GenerateRequest(BaseModel):
+    prompt: str = ""
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse(request, "index.html")
+
+
+@app.post("/api/optimize")
+async def optimize(body: OptimizeRequest):
+    prompt = body.prompt.strip()
+    do_optimize = body.optimize
     if not prompt:
-        return jsonify({"error": "No prompt provided"}), 400
+        return JSONResponse({"error": "No prompt provided"}, status_code=400)
 
     system = OPTIMIZE_PROMPT if do_optimize else SAFETY_ONLY_PROMPT
-    resp, err = ollama_post(
+    resp, err = await ollama_post(
         ollama_url("/api/chat"),
         json={
             "model": PROMPT_MODEL,
@@ -133,36 +147,35 @@ def optimize():
         },
     )
     if err:
-        return jsonify(err), 502
+        return JSONResponse(err, status_code=502)
 
     content = resp.json()["message"]["content"].strip()
 
     if _is_refusal(content):
-        return jsonify({
+        return JSONResponse({
             "blocked": True,
             "message": random.choice(_BLOCK_MESSAGES),
         })
     if not do_optimize:
-        return jsonify({"optimized": None})
-    return jsonify({"optimized": content})
+        return JSONResponse({"optimized": None})
+    return JSONResponse({"optimized": content})
 
 
-@app.route("/api/generate", methods=["POST"])
-def generate():
+@app.post("/api/generate")
+async def generate(body: GenerateRequest):
     # Images are never written to disk. The base64 payload travels
     # through memory only and is returned directly to the browser.
     if not IMAGE_MODEL:
-        return jsonify({"error": (
+        return JSONResponse({"error": (
             "IMAGE_MODEL is not set. "
             "Add it to your .env file as described in the README."
-        )}), 500
+        )}, status_code=500)
 
-    data = request.get_json()
-    prompt = (data or {}).get("prompt", "").strip()
+    prompt = body.prompt.strip()
     if not prompt:
-        return jsonify({"error": "No prompt provided"}), 400
+        return JSONResponse({"error": "No prompt provided"}, status_code=400)
 
-    title_resp, title_err = ollama_post(
+    title_resp, title_err = await ollama_post(
         ollama_url("/api/chat"),
         json={
             "model": PROMPT_MODEL,
@@ -177,23 +190,24 @@ def generate():
     if not title_err:
         title = _slugify(title_resp.json()["message"]["content"])
 
-    resp, err = ollama_post(
+    resp, err = await ollama_post(
         ollama_url("/api/generate"),
         json={"model": IMAGE_MODEL, "prompt": prompt, "stream": False},
     )
     if err:
-        return jsonify(err), 502
+        return JSONResponse(err, status_code=502)
 
-    body = resp.json()
-    images = body.get("images")
+    body_data = resp.json()
+    images = body_data.get("images")
     image_data = (
         images[0] if images
-        else body.get("image", body.get("response", ""))
+        else body_data.get("image", body_data.get("response", ""))
     )
-    return jsonify({"image": image_data, "title": title})
+    return JSONResponse({"image": image_data, "title": title})
 
 
 if __name__ == "__main__":
+    import uvicorn
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "1337"))
-    app.run(host=host, port=port, debug=False)
+    uvicorn.run(app, host=host, port=port)

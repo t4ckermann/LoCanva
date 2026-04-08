@@ -121,10 +121,10 @@ export class Controller {
             this.applyTheme(next);
         });
         this.ui.promptToggle.addEventListener("click", () => {
-            const expanding = !this.ui.promptBar.classList.contains("expanded");
-            this.setExpanded(expanding);
-            if (expanding) this.ui.prompt.focus();
+            this.setExpanded(true);
+            this.ui.prompt.focus();
         });
+        document.getElementById("prompt-close")?.addEventListener("click", () => this.setExpanded(false));
         this.ui.generateBtn.addEventListener("click", () => this.run(false));
         this.ui.optimizeBtn.addEventListener("click", () => this.run(true));
         this.ui.prompt.addEventListener("keydown", (e: KeyboardEvent) => {

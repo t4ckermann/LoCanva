@@ -15,6 +15,10 @@ const controller = new Controller({
     blockedMsg:             document.getElementById("blocked-msg")              as HTMLDivElement,
     errorMsg:               document.getElementById("error-msg")                as HTMLDivElement,
     downloadBtn:            document.getElementById("download-btn")             as HTMLButtonElement,
+    historyPanel:           document.getElementById("history-panel")            as HTMLDivElement,
+    historyToggle:          document.getElementById("history-toggle")           as HTMLButtonElement,
+    historyCount:           document.getElementById("history-count")            as HTMLSpanElement,
+    historyList:            document.getElementById("history-list")             as HTMLDivElement,
 });
 
 controller.bindEvents();

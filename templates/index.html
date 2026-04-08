@@ -43,6 +43,14 @@
             <div id="blocked-msg" class="blocked-msg hidden"></div>
             <div id="error-msg" class="error-msg hidden"></div>
         </main>
+        <div id="history-panel" class="history-panel hidden" aria-label="Image history">
+            <button id="history-toggle" class="history-toggle" aria-expanded="false" aria-controls="history-list">
+                <span class="material-icon">photo_library</span>
+                History
+                <span id="history-count" class="history-count" aria-live="polite"></span>
+            </button>
+            <div id="history-list" class="history-list" aria-hidden="true" role="list"></div>
+        </div>
     </div>
     <footer>
         <p>Powered by <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> · running locally on your machine</p>

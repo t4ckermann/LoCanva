@@ -30,6 +30,10 @@ function makeUI(): UI {
         <div id="optimized-prompt-display" class="hidden"></div>
         <div id="blocked-msg" class="hidden"></div>
         <div id="error-msg" class="hidden"></div>
+        <div id="history-panel" class="hidden"></div>
+        <button id="history-toggle"></button>
+        <span id="history-count"></span>
+        <div id="history-list"></div>
     `;
     return {
         themeToggle:            document.getElementById("theme-toggle")             as HTMLButtonElement,
@@ -46,6 +50,10 @@ function makeUI(): UI {
         blockedMsg:             document.getElementById("blocked-msg")              as HTMLDivElement,
         errorMsg:               document.getElementById("error-msg")                as HTMLDivElement,
         downloadBtn:            document.getElementById("download-btn")             as HTMLButtonElement,
+        historyPanel:           document.getElementById("history-panel")            as HTMLDivElement,
+        historyToggle:          document.getElementById("history-toggle")           as HTMLButtonElement,
+        historyCount:           document.getElementById("history-count")            as HTMLSpanElement,
+        historyList:            document.getElementById("history-list")             as HTMLDivElement,
     };
 }
 

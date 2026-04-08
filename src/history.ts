@@ -31,13 +31,8 @@ export class HistoryManager {
 
     // ── Session image history ─────────────────────────────────────────────────
 
-    addImage(entry: ImageEntry): void {
-        this.images.unshift(entry);
-    }
-
-    getImages(): readonly ImageEntry[] {
-        return this.images;
-    }
+    addImage(entry: ImageEntry): void { this.images.unshift(entry); }
+    getImages(): readonly ImageEntry[] { return this.images; }
 
     // ── Prompt history (IndexedDB) ────────────────────────────────────────────
 
@@ -83,24 +78,23 @@ export class HistoryManager {
     /** Navigate prompt history. Returns the prompt to show, or null if nothing changes. */
     navigate(dir: "up" | "down", current: string): string | null {
         if (this.prompts.length === 0) return null;
-        if (dir === "up") {
-            if (this.navIndex === -1) { this.draft = current; this.navIndex = 0; }
-            else if (this.navIndex < this.prompts.length - 1) { this.navIndex++; }
-            else return null;
-            return this.prompts[this.navIndex];
-        }
+        return dir === "up" ? this.navigateUp(current) : this.navigateDown();
+    }
+
+    private navigateUp(current: string): string | null {
+        if (this.navIndex === -1) { this.draft = current; this.navIndex = 0; }
+        else if (this.navIndex < this.prompts.length - 1) { this.navIndex++; }
+        else return null;
+        return this.prompts[this.navIndex];
+    }
+
+    private navigateDown(): string | null {
         if (this.navIndex === -1) return null;
         if (this.navIndex > 0) { this.navIndex--; return this.prompts[this.navIndex]; }
         this.navIndex = -1;
         return this.draft;
     }
 
-    isNavigating(): boolean {
-        return this.navIndex !== -1;
-    }
-
-    resetNav(): void {
-        this.navIndex = -1;
-        this.draft = "";
-    }
+    isNavigating(): boolean { return this.navIndex !== -1; }
+    resetNav(): void { this.navIndex = -1; this.draft = ""; }
 }

@@ -95,20 +95,18 @@ body:has(#loading-overlay:not(.hidden)) .logo {
 
 .prompt-content {
     padding: 0 16px 14px;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto;
     gap: 10px;
-    align-items: flex-end;
-}
-
-.textarea-wrap {
-    position: relative;
-    flex: 1;;
+    align-items: end;
 }
 
 #prompt-close {
-    position: absolute;
-    top: 4px;
-    right: 4px;
+    grid-column: 1;
+    grid-row: 1;
+    place-self: start end;
+    margin-top: 4px;
+    margin-right: 4px;
     width: 28px;
     height: 28px;
     min-height: unset;
@@ -134,7 +132,8 @@ body:has(#loading-overlay:not(.hidden)) .logo {
 }
 
 textarea#prompt {
-    flex: none;
+    grid-column: 1;
+    grid-row: 1;
     width: 100%;
     background: var(--bg);
     border: 1px solid var(--border);
@@ -170,12 +169,11 @@ textarea#prompt:focus {
     }
 
     .prompt-content {
-        flex-direction: column;
+        grid-template-columns: 1fr;
     }
 
     textarea#prompt {
         min-height: 72px;
-        min-width: 100%;
     }
 
     .buttons {
@@ -187,10 +185,6 @@ textarea#prompt:focus {
             flex: 1;
             max-width: none;
         }
-    }
-
-    .textarea-wrap {
-        width: 100%;
     }
     
 }

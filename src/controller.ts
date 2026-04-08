@@ -8,7 +8,6 @@ export interface UI {
     optimizeBtn:            HTMLButtonElement;
     promptBar:              HTMLDivElement;
     promptToggle:           HTMLButtonElement;
-    promptClose:            HTMLButtonElement;
     imageContainer:         HTMLDivElement;
     generatedImage:         HTMLImageElement;
     loadingOverlay:         HTMLDivElement;
@@ -125,7 +124,7 @@ export class Controller {
             this.setExpanded(true);
             this.ui.prompt.focus();
         });
-        this.ui.promptClose.addEventListener("click", () => this.setExpanded(false));
+        document.getElementById("prompt-close")?.addEventListener("click", () => this.setExpanded(false));
         this.ui.generateBtn.addEventListener("click", () => this.run(false));
         this.ui.optimizeBtn.addEventListener("click", () => this.run(true));
         this.ui.prompt.addEventListener("keydown", (e: KeyboardEvent) => {

@@ -20,6 +20,7 @@ function makeUI(): UI {
         <div id="prompt-bar" class="expanded"></div>
         <button id="prompt-toggle"></button>
         <button id="prompt-close"></button>
+
         <div id="image-container" class="hidden">
             <img id="generated-image" />
             <button id="download-btn"></button>
@@ -37,7 +38,6 @@ function makeUI(): UI {
         optimizeBtn:            document.getElementById("optimize-btn")             as HTMLButtonElement,
         promptBar:              document.getElementById("prompt-bar")               as HTMLDivElement,
         promptToggle:           document.getElementById("prompt-toggle")            as HTMLButtonElement,
-        promptClose:            document.getElementById("prompt-close")             as HTMLButtonElement,
         imageContainer:         document.getElementById("image-container")          as HTMLDivElement,
         generatedImage:         document.getElementById("generated-image")          as HTMLImageElement,
         loadingOverlay:         document.getElementById("loading-overlay")          as HTMLDivElement,
@@ -62,13 +62,13 @@ describe("prompt toggle", () => {
     });
 
     it("close button collapses the prompt bar", () => {
-        ui.promptClose.click();
+        document.getElementById("prompt-close")!.click();
         expect(ui.promptBar.classList.contains("expanded")).toBe(false);
         expect(ui.promptToggle.getAttribute("aria-expanded")).toBe("false");
     });
 
     it("open button expands the prompt bar", () => {
-        ui.promptClose.click();
+        document.getElementById("prompt-close")!.click();
         ui.promptToggle.click();
         expect(ui.promptBar.classList.contains("expanded")).toBe(true);
         expect(ui.promptToggle.getAttribute("aria-expanded")).toBe("true");

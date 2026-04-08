@@ -17,7 +17,16 @@
     display: flex;
     margin-top: 132px;
     justify-content: center;
-    overflow: hidden;
+    overflow: hidden auto;
+    transition: bottom 0.2s ease;
+}
+
+.app:has(.history-panel:not(.hidden)) .image-area {
+    bottom: 40px;
+}
+
+.app:has(.history-panel.open) .image-area {
+    bottom: 128px;
 }
 
 
@@ -76,8 +85,12 @@ body:has(#loading-overlay:not(.hidden)) .logo {
     transition: color 0.15s;
 }
 
-.prompt-bar.expanded .prompt-toggle {
-    display: none;
+.prompt-toggle .material-icon {
+    transition: transform 0.25s ease;
+}
+
+.prompt-bar.expanded .prompt-toggle .material-icon {
+    transform: rotate(180deg);
 }
 
 .prompt-toggle:hover:not(:disabled) {
@@ -88,7 +101,6 @@ body:has(#loading-overlay:not(.hidden)) .logo {
     position: absolute;
     right: 16px;
     top: 8px;
-    font-size: 15px;
     line-height: 1;
     border-radius: 50%;
 }
@@ -101,51 +113,21 @@ body:has(#loading-overlay:not(.hidden)) .logo {
     align-items: end;
 }
 
-#prompt-close {
-    grid-column: 1;
-    grid-row: 1;
-    place-self: start end;
-    margin-top: 4px;
-    margin-right: 4px;
-    width: 28px;
-    height: 28px;
-    min-height: unset;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: 50%;
-    background: none;
-    color: var(--text-muted);
-    transition: color 0.15s;
-    z-index: 160;
-}
-
-#prompt-close:hover:not(:disabled) {
-    border-color: transparent;
-    color: var(--text);
-}
-
 .prompt-bar:not(.expanded) .prompt-content {
     display: none;
 }
 
 textarea#prompt {
-    grid-column: 1;
-    grid-row: 1;
     width: 100%;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--border-radius);
     color: var(--text);
     font-family: inherit;
-    font-size: 14px;
-    padding: 8px 10px;
+    padding: 16px;
     resize: none;
     line-height: 1.5;
     outline: none;
-    z-index: 150;
     min-height: 104px;
 }
 
@@ -189,6 +171,25 @@ textarea#prompt:focus {
     
 }
 
+/* History panel */
+
+.history-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 90;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    height: 40px;
+    overflow: hidden;
+    transition: height 0.2s ease;
+}
+
+.history-panel.open {
+    height: 128px;
+}
+
 /* Footer */
 
 footer {
@@ -196,7 +197,6 @@ footer {
     padding: 1.5rem 1rem;
     border-top: 1px solid var(--border);
     color: var(--text-muted);
-    font-size: 0.85rem;
 }
 
 footer a {

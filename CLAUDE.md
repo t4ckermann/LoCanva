@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Always keep the codebase minimal, clean, and simple. Prefer fewer files, fewer abstractions, and less code. When in doubt, do less.
 
+Follow these principles in all code:
+
+- **KISS** — Keep It Simple, Stupid. Prefer direct, obvious solutions. Avoid premature abstractions and clever tricks.
+- **SOLID**:
+  - **S**ingle Responsibility — each function and class does one thing only.
+  - **O**pen/Closed — open for extension, closed for modification.
+  - **L**iskov Substitution — subtypes must be substitutable for their base types.
+  - **I**nterface Segregation — prefer narrow, focused interfaces over broad ones.
+  - **D**ependency Inversion — depend on abstractions, not concretions.
+
 ## Overview
 
 See [README.md](README.md) for setup, running, and configuration.

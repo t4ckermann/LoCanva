@@ -15,13 +15,12 @@
             <div class="prompt-bar-header">
                 <img class="logo" src="/static/assets/logo.svg" alt="LoCanva" aria-hidden="true">
                 <button class="prompt-toggle" id="prompt-toggle" aria-expanded="true">
-                    <span class="material-icon">edit</span> Describe your image
+                    <span class="material-icon">expand_more</span> Describe your image
                 </button>
                 <button id="theme-toggle" aria-label="Switch to light mode" title="Toggle theme"></button>
             </div>
             <div class="prompt-content" id="prompt-content">
                 <textarea id="prompt" placeholder="Describe the image you want to generate…" rows="3"></textarea>
-                <button id="prompt-close" aria-label="Close prompt"><span class="material-icon">close</span></button>
                 <div class="buttons">
                     <button id="generate-btn">Generate</button>
                     <button id="optimize-btn">Optimize &amp; Generate</button>
@@ -43,6 +42,14 @@
             <div id="blocked-msg" class="blocked-msg hidden"></div>
             <div id="error-msg" class="error-msg hidden"></div>
         </main>
+        <div id="history-panel" class="history-panel hidden" aria-label="Image history">
+            <button id="history-toggle" class="history-toggle" aria-expanded="false" aria-controls="history-list">
+                <span class="material-icon">photo_library</span>
+                History
+                <span id="history-count" class="history-count" aria-live="polite"></span>
+            </button>
+            <div id="history-list" class="history-list" aria-hidden="true" role="list"></div>
+        </div>
     </div>
     <footer>
         <p>Powered by <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> · running locally on your machine</p>

@@ -1,5 +1,6 @@
 import { settings } from "./settings.js";
 import { b64Mime, callGenerate, callOptimize } from "./api.js";
+import { HistoryManager, ImageEntry } from "./history.js";
 
 export interface UI {
     themeToggle:            HTMLButtonElement;
@@ -16,18 +17,23 @@ export interface UI {
     blockedMsg:             HTMLDivElement;
     errorMsg:               HTMLDivElement;
     downloadBtn:            HTMLButtonElement;
+    historyPanel:           HTMLDivElement;
+    historyToggle:          HTMLButtonElement;
+    historyCount:           HTMLSpanElement;
+    historyList:            HTMLDivElement;
 }
 
 export class Controller {
     private ui: UI;
     private isRunning = false;
     private imageTitle = "generated-image";
+    private history = new HistoryManager();
 
     constructor(ui: UI) {
         this.ui = ui;
     }
 
-    // ── View updates ──────────────────────────────────────────────────────────
+    // ── Theme ─────────────────────────────────────────────────────────────────
 
     private applyTheme(theme: string): void {
         const isLight = theme === "light";
@@ -38,70 +44,165 @@ export class Controller {
         this.ui.themeToggle.title = label;
     }
 
+    // ── Prompt bar ────────────────────────────────────────────────────────────
+
     private setExpanded(expanded: boolean): void {
         this.ui.promptBar.classList.toggle("expanded", expanded);
         this.ui.promptToggle.setAttribute("aria-expanded", String(expanded));
     }
+
+    // ── Loading / messages ────────────────────────────────────────────────────
 
     private setLoading(active: boolean, msg?: string): void {
         this.ui.loadingMsg.textContent = active ? (msg ?? "Loading…") : "";
         this.ui.loadingOverlay.classList.toggle("hidden", !active);
     }
 
-    private setButtonsDisabled(disabled: boolean): void {
+    private setControlsDisabled(disabled: boolean): void {
         this.ui.generateBtn.disabled = disabled;
         this.ui.optimizeBtn.disabled = disabled;
+        this.ui.historyToggle.disabled = disabled;
+        this.ui.historyList.style.pointerEvents = disabled ? "none" : "";
     }
 
-    private resetMessages(): void {
+    private clearMessages(): void {
         this.ui.blockedMsg.classList.add("hidden");
         this.ui.errorMsg.classList.add("hidden");
         this.ui.optimizedPromptDisplay.classList.add("hidden");
     }
 
-    // ── Actions ───────────────────────────────────────────────────────────────
+    private showBlocked(message: string): void {
+        this.ui.blockedMsg.textContent = message;
+        this.ui.blockedMsg.classList.remove("hidden");
+    }
+
+    private showOptimized(original: string, optimized: string): void {
+        if (optimized === original) return;
+        this.ui.optimizedPromptDisplay.textContent = `Optimized Prompt: ${optimized}`;
+        this.ui.optimizedPromptDisplay.classList.remove("hidden");
+    }
+
+    private showImage(src: string): void {
+        this.ui.generatedImage.src = src;
+        this.ui.imageContainer.classList.remove("hidden");
+    }
+
+    private showError(err: unknown): void {
+        this.ui.errorMsg.textContent = err instanceof Error
+            ? err.message
+            : "Something went wrong. Is Ollama running?";
+        this.ui.errorMsg.classList.remove("hidden");
+    }
+
+    // ── History ───────────────────────────────────────────────────────────────
+
+    private createThumbnail(entry: ImageEntry, index: number): HTMLButtonElement {
+        const btn = document.createElement("button");
+        btn.className = "history-thumb";
+        btn.title = entry.prompt;
+        btn.setAttribute("aria-label", entry.prompt);
+        btn.addEventListener("click", () => this.restoreFromHistory(index));
+
+        const img = document.createElement("img");
+        img.src = entry.src;
+        img.alt = "";
+        img.loading = "lazy";
+
+        const caption = document.createElement("span");
+        caption.className = "history-thumb-caption";
+        caption.textContent = entry.prompt;
+
+        btn.append(img, caption);
+        return btn;
+    }
+
+    private renderHistory(): void {
+        const images = this.history.getImages();
+        this.ui.historyCount.textContent = String(images.length);
+        this.ui.historyPanel.classList.toggle("hidden", images.length === 0);
+        this.ui.historyList.replaceChildren(
+            ...images.map((entry, i) => this.createThumbnail(entry, i))
+        );
+    }
+
+    private restoreFromHistory(index: number): void {
+        if (this.isRunning) return;
+        const entry = this.history.getImages()[index] as ImageEntry | undefined;
+        if (!entry) return;
+        this.clearMessages();
+        this.showImage(entry.src);
+        this.imageTitle = entry.title;
+        this.ui.prompt.value = entry.prompt;
+    }
+
+    private toggleHistoryPanel(): void {
+        const isOpen = this.ui.historyPanel.classList.toggle("open");
+        this.ui.historyToggle.setAttribute("aria-expanded", String(isOpen));
+        this.ui.historyList.setAttribute("aria-hidden", isOpen ? "false" : "true");
+    }
+
+    // ── Prompt history navigation ─────────────────────────────────────────────
+
+    private handleArrowNav(e: KeyboardEvent): void {
+        const dir = e.key === "ArrowUp" ? "up" : "down";
+        const value = this.ui.prompt.value;
+        const atFirstLine = !value.slice(0, this.ui.prompt.selectionStart ?? 0).includes("\n");
+
+        if (!this.history.isNavigating() && !(dir === "up" && atFirstLine)) return;
+
+        const result = this.history.navigate(dir, value);
+        if (result === null) return;
+
+        e.preventDefault();
+        this.ui.prompt.value = result;
+        this.ui.prompt.selectionStart = this.ui.prompt.selectionEnd = result.length;
+        this.ui.prompt.classList.toggle("history-nav", this.history.isNavigating());
+    }
+
+    // ── Generation ────────────────────────────────────────────────────────────
+
+    private async runGeneration(prompt: string, optimize: boolean): Promise<void> {
+        const optimizeResult = await callOptimize(prompt, optimize);
+        if (optimizeResult.blocked) { this.showBlocked(optimizeResult.message); return; }
+
+        const finalPrompt = optimizeResult.optimized;
+        if (optimize) this.showOptimized(prompt, finalPrompt);
+
+        this.setLoading(true, "Generating image — this may take a while…");
+        const { image, title } = await callGenerate(finalPrompt);
+        this.imageTitle = title;
+
+        const src = `data:${b64Mime(image)};base64,${image}`;
+        this.showImage(src);
+        this.history.addImage({ prompt: finalPrompt, src, title });
+        this.renderHistory();
+        await this.history.save(prompt);
+    }
 
     private async run(optimize: boolean): Promise<void> {
         const prompt = this.ui.prompt.value.trim();
         if (!prompt || this.isRunning) return;
-        this.isRunning = true;
 
+        this.isRunning = true;
+        this.history.resetNav();
+        this.ui.prompt.classList.remove("history-nav");
         this.setExpanded(false);
-        this.resetMessages();
+        this.clearMessages();
         this.setLoading(true, optimize ? "Optimizing prompt…" : "Checking prompt…");
-        this.setButtonsDisabled(true);
+        this.setControlsDisabled(true);
 
         try {
-            const optimizeResult = await callOptimize(prompt, optimize);
-            if (optimizeResult.blocked) {
-                this.ui.blockedMsg.textContent = optimizeResult.message;
-                this.ui.blockedMsg.classList.remove("hidden");
-                return;
-            }
-
-            const finalPrompt = optimizeResult.optimized;
-            if (optimize && finalPrompt !== prompt) {
-                this.ui.optimizedPromptDisplay.textContent = `Optimized Prompt: ${finalPrompt}`;
-                this.ui.optimizedPromptDisplay.classList.remove("hidden");
-            }
-
-            this.setLoading(true, "Generating image — this may take a while…");
-            const { image, title } = await callGenerate(finalPrompt);
-            this.imageTitle = title;
-
-            this.ui.generatedImage.src = `data:${b64Mime(image)};base64,${image}`;
-            this.ui.imageContainer.classList.remove("hidden");
+            await this.runGeneration(prompt, optimize);
         } catch (err) {
-            this.ui.errorMsg.textContent = err instanceof Error
-                ? err.message
-                : "Something went wrong. Is Ollama running?";
-            this.ui.errorMsg.classList.remove("hidden");
+            this.showError(err);
         } finally {
             this.isRunning = false;
             this.setLoading(false);
-            this.setButtonsDisabled(false);
+            this.setControlsDisabled(false);
         }
     }
+
+    // ── Download ──────────────────────────────────────────────────────────────
 
     download(): void {
         // TODO: prepend/append a user-defined prefix or suffix (stored in
@@ -121,19 +222,28 @@ export class Controller {
             this.applyTheme(next);
         });
         this.ui.promptToggle.addEventListener("click", () => {
-            this.setExpanded(true);
-            this.ui.prompt.focus();
+            const expanding = !this.ui.promptBar.classList.contains("expanded");
+            this.setExpanded(expanding);
+            if (expanding) this.ui.prompt.focus();
         });
-        document.getElementById("prompt-close")?.addEventListener("click", () => this.setExpanded(false));
         this.ui.generateBtn.addEventListener("click", () => this.run(false));
         this.ui.optimizeBtn.addEventListener("click", () => this.run(true));
         this.ui.prompt.addEventListener("keydown", (e: KeyboardEvent) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); this.run(true); }
+            if (e.key === "ArrowUp" || e.key === "ArrowDown") this.handleArrowNav(e);
+        });
+        this.ui.prompt.addEventListener("input", () => {
+            if (this.history.isNavigating()) {
+                this.history.resetNav();
+                this.ui.prompt.classList.remove("history-nav");
+            }
         });
         this.ui.downloadBtn.addEventListener("click", () => this.download());
+        this.ui.historyToggle.addEventListener("click", () => this.toggleHistoryPanel());
     }
 
     init(): void {
         this.applyTheme(settings.theme);
+        this.history.load().catch(() => undefined);
     }
 }

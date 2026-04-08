@@ -19,7 +19,6 @@ function makeUI(): UI {
         <button id="optimize-btn"></button>
         <div id="prompt-bar" class="expanded"></div>
         <button id="prompt-toggle"></button>
-        <button id="prompt-close"></button>
 
         <div id="image-container" class="hidden">
             <img id="generated-image" />
@@ -30,6 +29,10 @@ function makeUI(): UI {
         <div id="optimized-prompt-display" class="hidden"></div>
         <div id="blocked-msg" class="hidden"></div>
         <div id="error-msg" class="hidden"></div>
+        <div id="history-panel" class="hidden"></div>
+        <button id="history-toggle"></button>
+        <span id="history-count"></span>
+        <div id="history-list"></div>
     `;
     return {
         themeToggle:            document.getElementById("theme-toggle")             as HTMLButtonElement,
@@ -46,6 +49,10 @@ function makeUI(): UI {
         blockedMsg:             document.getElementById("blocked-msg")              as HTMLDivElement,
         errorMsg:               document.getElementById("error-msg")                as HTMLDivElement,
         downloadBtn:            document.getElementById("download-btn")             as HTMLButtonElement,
+        historyPanel:           document.getElementById("history-panel")            as HTMLDivElement,
+        historyToggle:          document.getElementById("history-toggle")           as HTMLButtonElement,
+        historyCount:           document.getElementById("history-count")            as HTMLSpanElement,
+        historyList:            document.getElementById("history-list")             as HTMLDivElement,
     };
 }
 
@@ -61,15 +68,15 @@ describe("prompt toggle", () => {
         controller.init();
     });
 
-    it("close button collapses the prompt bar", () => {
-        document.getElementById("prompt-close")!.click();
+    it("toggle button collapses the prompt bar when expanded", () => {
+        ui.promptToggle.click();
         expect(ui.promptBar.classList.contains("expanded")).toBe(false);
         expect(ui.promptToggle.getAttribute("aria-expanded")).toBe("false");
     });
 
-    it("open button expands the prompt bar", () => {
-        document.getElementById("prompt-close")!.click();
-        ui.promptToggle.click();
+    it("toggle button expands the prompt bar when collapsed", () => {
+        ui.promptToggle.click(); // collapse
+        ui.promptToggle.click(); // expand
         expect(ui.promptBar.classList.contains("expanded")).toBe(true);
         expect(ui.promptToggle.getAttribute("aria-expanded")).toBe("true");
     });

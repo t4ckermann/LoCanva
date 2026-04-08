@@ -20,7 +20,10 @@
                 <button id="theme-toggle" aria-label="Switch to light mode" title="Toggle theme"></button>
             </div>
             <div class="prompt-content" id="prompt-content">
-                <textarea id="prompt" placeholder="Describe the image you want to generate…" rows="3"></textarea>
+                <div class="textarea-wrap">
+                    <textarea id="prompt" placeholder="Describe the image you want to generate…" rows="3"></textarea>
+                    <button id="prompt-close" aria-label="Close prompt"><span class="material-icon">close</span></button>
+                </div>
                 <div class="buttons">
                     <button id="generate-btn">Generate</button>
                     <button id="optimize-btn">Optimize &amp; Generate</button>

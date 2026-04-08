@@ -7,6 +7,7 @@ const controller = new Controller({
     optimizeBtn:            document.getElementById("optimize-btn")             as HTMLButtonElement,
     promptBar:              document.getElementById("prompt-bar")               as HTMLDivElement,
     promptToggle:           document.getElementById("prompt-toggle")            as HTMLButtonElement,
+    promptClose:            document.getElementById("prompt-close")             as HTMLButtonElement,
     imageContainer:         document.getElementById("image-container")          as HTMLDivElement,
     generatedImage:         document.getElementById("generated-image")          as HTMLImageElement,
     loadingOverlay:         document.getElementById("loading-overlay")          as HTMLDivElement,

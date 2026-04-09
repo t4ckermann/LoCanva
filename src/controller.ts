@@ -16,6 +16,10 @@ export interface UI {
     optimizedPromptDisplay: HTMLDivElement;
     blockedMsg:             HTMLDivElement;
     errorMsg:               HTMLDivElement;
+    enhanceBtn:             HTMLButtonElement;
+    enhanceChip:            HTMLDivElement;
+    enhanceChipLabel:       HTMLSpanElement;
+    enhanceChipDismiss:     HTMLButtonElement;
     downloadBtn:            HTMLButtonElement;
     historyPanel:           HTMLDivElement;
     historyToggle:          HTMLButtonElement;
@@ -125,6 +129,14 @@ export class Controller {
         );
     }
 
+    private setEnhanceMode(active: boolean, prompt = ""): void {
+        this.ui.enhanceChip.classList.toggle("hidden", !active);
+        if (active) {
+            const label = prompt.length > 60 ? prompt.slice(0, 60) + "…" : prompt;
+            this.ui.enhanceChipLabel.textContent = `Iterating on: ${label}`;
+        }
+    }
+
     private restoreFromHistory(index: number): void {
         if (this.isRunning) return;
         const entry = this.history.getImages()[index] as ImageEntry | undefined;
@@ -133,6 +145,13 @@ export class Controller {
         this.showImage(entry.src);
         this.imageTitle = entry.title;
         this.ui.prompt.value = entry.prompt;
+        this.ui.enhanceBtn.classList.remove("hidden");
+    }
+
+    private enhance(): void {
+        this.setExpanded(true);
+        this.setEnhanceMode(true, this.ui.prompt.value);
+        this.ui.prompt.focus();
     }
 
     private toggleHistoryPanel(): void {
@@ -186,6 +205,8 @@ export class Controller {
         this.isRunning = true;
         this.history.resetNav();
         this.ui.prompt.classList.remove("history-nav");
+        this.setEnhanceMode(false);
+        this.ui.enhanceBtn.classList.add("hidden");
         this.setExpanded(false);
         this.clearMessages();
         this.setLoading(true, optimize ? "Optimizing prompt…" : "Checking prompt…");
@@ -238,6 +259,8 @@ export class Controller {
                 this.ui.prompt.classList.remove("history-nav");
             }
         });
+        this.ui.enhanceBtn.addEventListener("click", () => this.enhance());
+        this.ui.enhanceChipDismiss.addEventListener("click", () => this.setEnhanceMode(false));
         this.ui.downloadBtn.addEventListener("click", () => this.download());
         this.ui.historyToggle.addEventListener("click", () => this.toggleHistoryPanel());
     }

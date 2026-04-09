@@ -22,7 +22,12 @@ function makeUI(): UI {
 
         <div id="image-container" class="hidden">
             <img id="generated-image" />
+            <button id="enhance-btn" class="hidden"></button>
             <button id="download-btn"></button>
+        </div>
+        <div id="enhance-chip" class="hidden">
+            <span id="enhance-chip-label"></span>
+            <button id="enhance-chip-dismiss"></button>
         </div>
         <div id="loading-overlay" class="hidden"></div>
         <span id="loading-msg"></span>
@@ -48,6 +53,10 @@ function makeUI(): UI {
         optimizedPromptDisplay: document.getElementById("optimized-prompt-display") as HTMLDivElement,
         blockedMsg:             document.getElementById("blocked-msg")              as HTMLDivElement,
         errorMsg:               document.getElementById("error-msg")                as HTMLDivElement,
+        enhanceBtn:             document.getElementById("enhance-btn")              as HTMLButtonElement,
+        enhanceChip:            document.getElementById("enhance-chip")             as HTMLDivElement,
+        enhanceChipLabel:       document.getElementById("enhance-chip-label")       as HTMLSpanElement,
+        enhanceChipDismiss:     document.getElementById("enhance-chip-dismiss")     as HTMLButtonElement,
         downloadBtn:            document.getElementById("download-btn")             as HTMLButtonElement,
         historyPanel:           document.getElementById("history-panel")            as HTMLDivElement,
         historyToggle:          document.getElementById("history-toggle")           as HTMLButtonElement,
@@ -151,5 +160,87 @@ describe("Controller.download", () => {
         ui.downloadBtn.click();
 
         expect(spy).toHaveBeenCalledOnce();
+    });
+});
+
+// ── enhance mode ──────────────────────────────────────────────────────────────
+
+describe("enhance mode", () => {
+    let ui: UI;
+
+    beforeEach(() => {
+        ui = makeUI();
+        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callGenerate).mockResolvedValue({ image: "iVBORabc", title: "a-cat" });
+    });
+
+    it("enhance button is hidden before any history is restored", () => {
+        new Controller(ui).bindEvents();
+        expect(ui.enhanceBtn.classList.contains("hidden")).toBe(true);
+    });
+
+    it("enhance button appears after restoring a history entry", async () => {
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
+
+        const thumb = ui.historyList.querySelector("button") as HTMLButtonElement;
+        thumb.click();
+
+        expect(ui.enhanceBtn.classList.contains("hidden")).toBe(false);
+    });
+
+    it("clicking enhance shows chip with truncated prompt label", async () => {
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
+
+        const thumb = ui.historyList.querySelector("button") as HTMLButtonElement;
+        thumb.click();
+        ui.enhanceBtn.click();
+
+        expect(ui.enhanceChip.classList.contains("hidden")).toBe(false);
+        expect(ui.enhanceChipLabel.textContent).toContain("Iterating on:");
+    });
+
+    it("chip dismiss hides the chip", async () => {
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
+
+        const thumb = ui.historyList.querySelector("button") as HTMLButtonElement;
+        thumb.click();
+        ui.enhanceBtn.click();
+        ui.enhanceChipDismiss.click();
+
+        expect(ui.enhanceChip.classList.contains("hidden")).toBe(true);
+    });
+
+    it("starting a new generation hides the enhance button and chip", async () => {
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
+
+        const thumb = ui.historyList.querySelector("button") as HTMLButtonElement;
+        thumb.click();
+        ui.enhanceBtn.click();
+
+        ui.prompt.value = "a dog";
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.enhanceChip.classList.contains("hidden")).toBe(true));
+
+        expect(ui.enhanceBtn.classList.contains("hidden")).toBe(true);
     });
 });

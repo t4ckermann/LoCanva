@@ -20,7 +20,8 @@ cp .env.example .env  # then edit .env as needed
 
 ```bash
 ollama pull x/z-image-turbo  # image generation (IMAGE_MODEL)
-ollama pull llama3.2       # prompt optimization (PROMPT_MODEL)
+ollama pull x/flux2-klein    # fallback image model (IMAGE_MODEL_FALLBACK)
+ollama pull llama3.2         # prompt optimization (PROMPT_MODEL)
 ```
 
 **Node.js (frontend tooling)**
@@ -68,8 +69,9 @@ The server starts at `http://127.0.0.1:1337` by default.
 | `HOST`            | `127.0.0.1`               | Bind address                             |
 | `PORT`            | `1337`                    | Listen port                              |
 | `OLLAMA_BASE_URL` | `http://localhost:11434`  | Ollama API base URL                      |
-| `IMAGE_MODEL`     | `x/z-image-turbo`           | Ollama model used for image generation   |
-| `PROMPT_MODEL`    | `llama3.2`                | Ollama model used for prompt optimization and safety filtering |
+| `IMAGE_MODEL`          | `x/z-image-turbo`        | Ollama model used for image generation   |
+| `IMAGE_MODEL_FALLBACK` | `""` (disabled)          | Fallback image model tried automatically if `IMAGE_MODEL` fails |
+| `PROMPT_MODEL`         | `llama3.2`               | Ollama model used for prompt optimization and safety filtering |
 
 ## Network access
 

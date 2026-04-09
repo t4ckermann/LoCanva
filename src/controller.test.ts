@@ -34,6 +34,7 @@ function makeUI(): UI {
         <div id="optimized-prompt-display" class="hidden"></div>
         <div id="blocked-msg" class="hidden"></div>
         <div id="error-msg" class="hidden"></div>
+        <div id="fallback-msg" class="hidden"></div>
         <div id="history-panel" class="hidden"></div>
         <button id="history-toggle"></button>
         <span id="history-count"></span>
@@ -53,6 +54,7 @@ function makeUI(): UI {
         optimizedPromptDisplay: document.getElementById("optimized-prompt-display") as HTMLDivElement,
         blockedMsg:             document.getElementById("blocked-msg")              as HTMLDivElement,
         errorMsg:               document.getElementById("error-msg")                as HTMLDivElement,
+        fallbackMsg:            document.getElementById("fallback-msg")             as HTMLDivElement,
         enhanceBtn:             document.getElementById("enhance-btn")              as HTMLButtonElement,
         enhanceChip:            document.getElementById("enhance-chip")             as HTMLDivElement,
         enhanceChipLabel:       document.getElementById("enhance-chip-label")       as HTMLSpanElement,
@@ -242,5 +244,56 @@ describe("enhance mode", () => {
         await vi.waitFor(() => expect(ui.enhanceChip.classList.contains("hidden")).toBe(true));
 
         expect(ui.enhanceBtn.classList.contains("hidden")).toBe(true);
+    });
+});
+
+// ── fallback model notification ───────────────────────────────────────────────
+
+describe("fallback model notification", () => {
+    let ui: UI;
+
+    beforeEach(() => { ui = makeUI(); });
+
+    it("shows fallback message when response includes fallback_model", async () => {
+        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callGenerate).mockResolvedValue({
+            image: "iVBORabc", title: "a-cat", fallback_model: "x/flux2-klein",
+        });
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.fallbackMsg.classList.contains("hidden")).toBe(false));
+        expect(ui.fallbackMsg.textContent).toContain("x/flux2-klein");
+    });
+
+    it("does not show fallback message on normal success", async () => {
+        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callGenerate).mockResolvedValue({ image: "iVBORabc", title: "a-cat" });
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
+        expect(ui.fallbackMsg.classList.contains("hidden")).toBe(true);
+    });
+
+    it("clears fallback message on next generation", async () => {
+        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callGenerate).mockResolvedValueOnce({
+            image: "iVBORabc", title: "a-cat", fallback_model: "x/flux2-klein",
+        }).mockResolvedValueOnce({ image: "iVBORxyz", title: "a-dog" });
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.fallbackMsg.classList.contains("hidden")).toBe(false));
+
+        ui.prompt.value = "a dog";
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.fallbackMsg.classList.contains("hidden")).toBe(true));
     });
 });

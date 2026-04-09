@@ -274,3 +274,9 @@ textarea#prompt.history-nav {
     border: 1px solid var(--error-border);
     color: var(--error-text);
 }
+
+.fallback-msg {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    color: var(--warn-text);
+}

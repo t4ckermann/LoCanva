@@ -18,6 +18,7 @@ const controller = new Controller({
     enhanceChip:            document.getElementById("enhance-chip")             as HTMLDivElement,
     enhanceChipLabel:       document.getElementById("enhance-chip-label")       as HTMLSpanElement,
     enhanceChipDismiss:     document.getElementById("enhance-chip-dismiss")     as HTMLButtonElement,
+    fallbackMsg:            document.getElementById("fallback-msg")             as HTMLDivElement,
     downloadBtn:            document.getElementById("download-btn")             as HTMLButtonElement,
     historyPanel:           document.getElementById("history-panel")            as HTMLDivElement,
     historyToggle:          document.getElementById("history-toggle")           as HTMLButtonElement,

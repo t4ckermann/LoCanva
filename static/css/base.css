@@ -41,6 +41,9 @@
     --error-bg: #1a1018;
     --error-border: #3a1a2a;
     --error-text: #f5a0c0;
+    --warn-bg: #1a1800;
+    --warn-border: #3a3000;
+    --warn-text: #e8d080;
     --border-radius: 4px;
 }
 
@@ -57,6 +60,9 @@
     --error-bg: #fff0f4;
     --error-border: #e8a0b8;
     --error-text: #a02050;
+    --warn-bg: #fffbe6;
+    --warn-border: #d4b800;
+    --warn-text: #7a6000;
 }
 
 html, body {

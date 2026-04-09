@@ -20,6 +20,7 @@ export interface UI {
     enhanceChip:            HTMLDivElement;
     enhanceChipLabel:       HTMLSpanElement;
     enhanceChipDismiss:     HTMLButtonElement;
+    fallbackMsg:            HTMLDivElement;
     downloadBtn:            HTMLButtonElement;
     historyPanel:           HTMLDivElement;
     historyToggle:          HTMLButtonElement;
@@ -72,6 +73,7 @@ export class Controller {
     private clearMessages(): void {
         this.ui.blockedMsg.classList.add("hidden");
         this.ui.errorMsg.classList.add("hidden");
+        this.ui.fallbackMsg.classList.add("hidden");
         this.ui.optimizedPromptDisplay.classList.add("hidden");
     }
 
@@ -89,6 +91,11 @@ export class Controller {
     private showImage(src: string): void {
         this.ui.generatedImage.src = src;
         this.ui.imageContainer.classList.remove("hidden");
+    }
+
+    private showFallback(model: string): void {
+        this.ui.fallbackMsg.textContent = `Primary model failed — using fallback: ${model}`;
+        this.ui.fallbackMsg.classList.remove("hidden");
     }
 
     private showError(err: unknown): void {
@@ -188,8 +195,9 @@ export class Controller {
         if (optimize) this.showOptimized(prompt, finalPrompt);
 
         this.setLoading(true, "Generating image — this may take a while…");
-        const { image, title } = await callGenerate(finalPrompt);
+        const { image, title, fallback_model } = await callGenerate(finalPrompt);
         this.imageTitle = title;
+        if (fallback_model) this.showFallback(fallback_model);
 
         const src = `data:${b64Mime(image)};base64,${image}`;
         this.showImage(src);

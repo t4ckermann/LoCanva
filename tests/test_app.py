@@ -65,7 +65,8 @@ class TestOptimize:
         assert data["blocked"] is True
         assert isinstance(data["message"], str) and data["message"]
 
-    def test_natural_language_refusal_is_blocked(self, client):
+    def test_natural_language_refusal_is_not_blocked(self, client):
+        # Only the literal "BLOCKED" token triggers a block; LLM prose is passed through.
         refusal = "I cannot create explicit content. Can I help you?"
         with patch("app.ollama_post", new=AsyncMock(return_value=mock_chat_resp(refusal))):
             resp = client.post(
@@ -73,8 +74,8 @@ class TestOptimize:
                 json={"prompt": "explicit content", "optimize": True},
             )
         data = resp.json()
-        assert data["blocked"] is True
-        assert isinstance(data["message"], str) and data["message"]
+        assert "blocked" not in data
+        assert data["optimized"] == refusal
 
     def test_blocked_response_has_no_optimized_field(self, client):
         # Frontend uses `data.blocked` to stop generation — verify the

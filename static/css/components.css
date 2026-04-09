@@ -61,51 +61,6 @@ button:hover:not(:disabled) {
 
 .enhance-btn { right: 52px; }
 
-/* Enhance chip (prompt bar) */
-
-.enhance-chip {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    background: var(--surface);
-    border: 1px solid var(--accent);
-    border-radius: var(--border-radius);
-    font-size: 12px;
-    color: var(--text-muted);
-    overflow: hidden;
-}
-
-#enhance-chip-label {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-.enhance-chip-dismiss {
-    flex-shrink: 0;
-    background: none;
-    border: none;
-    min-height: unset;
-    width: 18px;
-    height: 18px;
-    padding: 0;
-    font-size: 14px;
-    line-height: 1;
-    color: var(--text-muted);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.enhance-chip-dismiss:hover:not(:disabled) {
-    border-color: transparent;
-    color: var(--text);
-}
-
 /* Download button */
 
 .download-btn { right: 8px; }

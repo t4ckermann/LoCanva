@@ -128,7 +128,7 @@ textarea#prompt {
     resize: none;
     line-height: 1.5;
     outline: none;
-    min-height: 104px;
+    min-height: 160px;
 }
 
 textarea#prompt:focus {
@@ -180,7 +180,8 @@ textarea#prompt:focus {
     right: 0;
     z-index: 90;
     background: var(--surface);
-    border-top: 1px solid var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
     height: 40px;
     overflow: hidden;
     transition: height 0.2s ease;

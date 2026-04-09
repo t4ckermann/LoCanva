@@ -87,17 +87,9 @@ _BLOCK_MESSAGES = [
     "I was built for art, not objectification. Elevate your game.",
 ]
 
-_REFUSAL_PREFIXES = (
-    "blocked",
-    "i cannot", "i can't", "i won't", "i will not",
-    "i'm unable", "i am unable", "i'm sorry", "i am sorry",
-    "sorry,", "sorry.", "apologies,",
-)
-
 
 def _is_refusal(text: str) -> bool:
-    lower = text.lower()
-    return any(lower.startswith(p) for p in _REFUSAL_PREFIXES)
+    return text.strip().upper() == "BLOCKED"
 
 
 async def _try_generate_image(model: str, prompt: str):

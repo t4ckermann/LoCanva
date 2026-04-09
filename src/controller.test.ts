@@ -16,6 +16,7 @@ function makeUI(): UI {
         <button id="theme-toggle"></button>
         <textarea id="prompt"></textarea>
         <button id="generate-btn"></button>
+        <button id="optimize-only-btn"></button>
         <button id="optimize-btn"></button>
         <div id="prompt-bar" class="expanded"></div>
         <button id="prompt-toggle"></button>
@@ -24,10 +25,6 @@ function makeUI(): UI {
             <img id="generated-image" />
             <button id="enhance-btn" class="hidden"></button>
             <button id="download-btn"></button>
-        </div>
-        <div id="enhance-chip" class="hidden">
-            <span id="enhance-chip-label"></span>
-            <button id="enhance-chip-dismiss"></button>
         </div>
         <div id="loading-overlay" class="hidden"></div>
         <span id="loading-msg"></span>
@@ -44,6 +41,7 @@ function makeUI(): UI {
         themeToggle:            document.getElementById("theme-toggle")             as HTMLButtonElement,
         prompt:                 document.getElementById("prompt")                   as HTMLTextAreaElement,
         generateBtn:            document.getElementById("generate-btn")             as HTMLButtonElement,
+        optimizeOnlyBtn:        document.getElementById("optimize-only-btn")        as HTMLButtonElement,
         optimizeBtn:            document.getElementById("optimize-btn")             as HTMLButtonElement,
         promptBar:              document.getElementById("prompt-bar")               as HTMLDivElement,
         promptToggle:           document.getElementById("prompt-toggle")            as HTMLButtonElement,
@@ -56,9 +54,6 @@ function makeUI(): UI {
         errorMsg:               document.getElementById("error-msg")                as HTMLDivElement,
         fallbackMsg:            document.getElementById("fallback-msg")             as HTMLDivElement,
         enhanceBtn:             document.getElementById("enhance-btn")              as HTMLButtonElement,
-        enhanceChip:            document.getElementById("enhance-chip")             as HTMLDivElement,
-        enhanceChipLabel:       document.getElementById("enhance-chip-label")       as HTMLSpanElement,
-        enhanceChipDismiss:     document.getElementById("enhance-chip-dismiss")     as HTMLButtonElement,
         downloadBtn:            document.getElementById("download-btn")             as HTMLButtonElement,
         historyPanel:           document.getElementById("history-panel")            as HTMLDivElement,
         historyToggle:          document.getElementById("history-toggle")           as HTMLButtonElement,
@@ -195,39 +190,7 @@ describe("enhance mode", () => {
         expect(ui.enhanceBtn.classList.contains("hidden")).toBe(false);
     });
 
-    it("clicking enhance shows chip with truncated prompt label", async () => {
-        const controller = new Controller(ui);
-        controller.bindEvents();
-        ui.prompt.value = "a cat";
-
-        ui.generateBtn.click();
-        await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
-
-        const thumb = ui.historyList.querySelector("button") as HTMLButtonElement;
-        thumb.click();
-        ui.enhanceBtn.click();
-
-        expect(ui.enhanceChip.classList.contains("hidden")).toBe(false);
-        expect(ui.enhanceChipLabel.textContent).toContain("Iterating on:");
-    });
-
-    it("chip dismiss hides the chip", async () => {
-        const controller = new Controller(ui);
-        controller.bindEvents();
-        ui.prompt.value = "a cat";
-
-        ui.generateBtn.click();
-        await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
-
-        const thumb = ui.historyList.querySelector("button") as HTMLButtonElement;
-        thumb.click();
-        ui.enhanceBtn.click();
-        ui.enhanceChipDismiss.click();
-
-        expect(ui.enhanceChip.classList.contains("hidden")).toBe(true);
-    });
-
-    it("starting a new generation hides the enhance button and chip", async () => {
+    it("starting a new generation hides the enhance button", async () => {
         const controller = new Controller(ui);
         controller.bindEvents();
         ui.prompt.value = "a cat";
@@ -241,9 +204,38 @@ describe("enhance mode", () => {
 
         ui.prompt.value = "a dog";
         ui.generateBtn.click();
-        await vi.waitFor(() => expect(ui.enhanceChip.classList.contains("hidden")).toBe(true));
+        await vi.waitFor(() => expect(ui.enhanceBtn.classList.contains("hidden")).toBe(true));
+    });
+});
 
-        expect(ui.enhanceBtn.classList.contains("hidden")).toBe(true);
+// ── optimize only ─────────────────────────────────────────────────────────────
+
+describe("optimize only", () => {
+    let ui: UI;
+
+    beforeEach(() => {
+        ui = makeUI();
+        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a majestic cat" });
+    });
+
+    it("replaces prompt text with optimized result", async () => {
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.optimizeOnlyBtn.click();
+        await vi.waitFor(() => expect(ui.prompt.value).toBe("a majestic cat"));
+    });
+
+    it("does not replace prompt when optimized equals original", async () => {
+        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.optimizeOnlyBtn.click();
+        await vi.waitFor(() => expect(ui.optimizeOnlyBtn.disabled).toBe(false));
+        expect(ui.prompt.value).toBe("a cat");
     });
 });
 

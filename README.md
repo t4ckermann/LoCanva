@@ -8,6 +8,19 @@ A locally-hosted canvas app powered by [Ollama](https://ollama.com).
 - [Node.js](https://nodejs.org) (LTS) — managed via [nvm](https://github.com/nvm-sh/nvm)
 - [Ollama](https://ollama.com) running locally
 
+### Hardware
+
+> **macOS (Apple Silicon) only** — Ollama's image generation support is currently macOS-only. Linux and Windows are not yet supported.
+
+The image models (`x/z-image-turbo` at ~12–16 GB, `x/flux2-klein` at ~13 GB) are loaded into unified memory alongside the OS and other processes, so the effective floor is higher than the model size alone:
+
+| Unified memory | Outcome |
+|----------------|---------|
+| 16 GB          | Likely too little — reported to fall short by a few hundred MB in practice |
+| 20 GB or more  | Confirmed working |
+
+Intel Macs and non-Apple hardware are not supported for image generation at this time.
+
 ## Setup
 
 **Environment**

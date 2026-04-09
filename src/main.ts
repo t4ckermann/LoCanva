@@ -5,7 +5,6 @@ const controller = new Controller({
     prompt:                 document.getElementById("prompt")                   as HTMLTextAreaElement,
     generateBtn:            document.getElementById("generate-btn")             as HTMLButtonElement,
     optimizeOnlyBtn:        document.getElementById("optimize-only-btn")        as HTMLButtonElement,
-    optimizeBtn:            document.getElementById("optimize-btn")             as HTMLButtonElement,
     promptBar:              document.getElementById("prompt-bar")               as HTMLDivElement,
     promptToggle:           document.getElementById("prompt-toggle")            as HTMLButtonElement,
     imageContainer:         document.getElementById("image-container")          as HTMLDivElement,

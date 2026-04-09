@@ -7,7 +7,6 @@ export interface UI {
     prompt:                 HTMLTextAreaElement;
     generateBtn:            HTMLButtonElement;
     optimizeOnlyBtn:        HTMLButtonElement;
-    optimizeBtn:            HTMLButtonElement;
     promptBar:              HTMLDivElement;
     promptToggle:           HTMLButtonElement;
     imageContainer:         HTMLDivElement;
@@ -64,7 +63,6 @@ export class Controller {
     private setControlsDisabled(disabled: boolean): void {
         this.ui.generateBtn.disabled = disabled;
         this.ui.optimizeOnlyBtn.disabled = disabled;
-        this.ui.optimizeBtn.disabled = disabled;
         this.ui.historyToggle.disabled = disabled;
         this.ui.historyList.style.pointerEvents = disabled ? "none" : "";
     }
@@ -272,7 +270,6 @@ export class Controller {
         });
         this.ui.generateBtn.addEventListener("click", () => this.run(false));
         this.ui.optimizeOnlyBtn.addEventListener("click", () => this.run(true, false));
-        this.ui.optimizeBtn.addEventListener("click", () => this.run(true));
         this.ui.prompt.addEventListener("keydown", (e: KeyboardEvent) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); this.run(true); }
             if (e.key === "ArrowUp" || e.key === "ArrowDown") this.handleArrowNav(e);

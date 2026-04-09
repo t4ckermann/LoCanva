@@ -45,6 +45,8 @@
     --warn-border: #3a3000;
     --warn-text: #e8d080;
     --border-radius: 4px;
+    --button-height: 48px;
+    --gap: 8px;
 }
 
 [data-theme="light"] {

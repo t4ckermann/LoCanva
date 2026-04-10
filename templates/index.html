@@ -22,25 +22,28 @@
             <div class="prompt-content" id="prompt-content">
                 <textarea id="prompt" placeholder="Describe the image you want to generate…" rows="3"></textarea>
                 <div class="buttons">
+                    <button id="optimize-only-btn">Optimize Prompt</button>
                     <button id="generate-btn">Generate</button>
-                    <button id="optimize-btn">Optimize &amp; Generate</button>
                 </div>
             </div>
         </div>
         <main class="image-area">
             <div id="image-container" class="image-container hidden">
                 <img id="generated-image" alt="Generated image" />
-                <button id="download-btn" class="download-btn" title="Download image" aria-label="Download image">
+                <button id="enhance-btn" class="image-action-btn enhance-btn hidden" title="Enhance this image" aria-label="Enhance this image">
+                    <span class="material-icon">auto_fix_high</span>
+                </button>
+                <button id="download-btn" class="image-action-btn download-btn" title="Download image" aria-label="Download image">
                     <span class="material-icon">download</span>
                 </button>
             </div>
             <div id="loading-overlay" class="loading-overlay hidden">
                 <img class="loading-overlay-spinner" src="/static/assets/logo.svg" alt="">
                 <span id="loading-msg">Generating image…</span>
-                <div id="optimized-prompt-display" class="optimized-prompt hidden"></div>
             </div>
             <div id="blocked-msg" class="blocked-msg hidden"></div>
             <div id="error-msg" class="error-msg hidden"></div>
+            <div id="fallback-msg" class="fallback-msg hidden"></div>
         </main>
         <div id="history-panel" class="history-panel hidden" aria-label="Image history">
             <button id="history-toggle" class="history-toggle" aria-expanded="false" aria-controls="history-list">

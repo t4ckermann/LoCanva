@@ -49,11 +49,14 @@ After any edit, also remove dead code — unused variables, functions, imports, 
 
 ## Testing (mandatory)
 
-After any change to `app.py` or `tests/`, always run the test suite and fix all failures before considering the task done:
+After any change to **any** code file, always run both test suites and fix all failures before considering the task done:
 
-```bash
-pytest tests/
-```
+| Scope | Command |
+|-------|---------|
+| Frontend (`src/**/*.ts`) | `npm test` |
+| Backend (`app.py`) | `pytest tests/` |
+
+When adding or changing frontend behaviour, add or update tests in `src/controller.test.ts` (or the relevant `*.test.ts` file) to cover the new behaviour. Every new public method, UI state change, or event handler should have a corresponding test.
 
 When adding or changing backend functionality, add or update tests in `tests/test_app.py` to cover the new behaviour. Every new route, branch, or error case should have a corresponding test.
 

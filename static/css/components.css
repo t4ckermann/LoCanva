@@ -3,7 +3,7 @@
 .buttons {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--gap);
 }
 
 button {
@@ -17,8 +17,8 @@ button {
     padding: 8px 16px;
     white-space: nowrap;
     transition: border-color 0.15s, color 0.15s;
-    min-height: 48px;
-    gap: 8px;
+    min-height: var(--button-height);
+    gap: var(--gap);
 }
 
 button:disabled {
@@ -39,12 +39,11 @@ button:hover:not(:disabled) {
     }
 }
 
-/* Download button */
+/* Overlay action buttons on the image (enhance, download) */
 
-.download-btn {
+.image-action-btn {
     position: absolute;
     top: 8px;
-    right: 8px;
     width: 36px;
     height: 36px;
     min-height: unset;
@@ -56,9 +55,15 @@ button:hover:not(:disabled) {
     opacity: 0.7;
 }
 
-.download-btn:hover:not(:disabled) {
+.image-action-btn:hover:not(:disabled) {
     opacity: 1;
 }
+
+.enhance-btn { right: 52px; }
+
+/* Download button */
+
+.download-btn { right: 8px; }
 
 /* Loading overlay */
 
@@ -84,24 +89,12 @@ button:hover:not(:disabled) {
     font-size: 13px;
 }
 
-.optimized-prompt {
-    max-width: 480px;
-    padding: 10px 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--border-radius);
-    color: var(--text-muted);
-    font-size: 12px;
-    line-height: 1.5;
-    text-align: center;
-}
-
 /* History panel */
 
 .history-toggle {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--gap);
     width: 100%;
     height: 40px;
     padding: 0 14px;
@@ -135,7 +128,7 @@ button:hover:not(:disabled) {
 
 .history-list {
     display: flex;
-    gap: 8px;
+    gap: var(--gap);
     padding: 0 12px 10px;
     overflow-x: auto;
     height: 88px;
@@ -223,4 +216,10 @@ textarea#prompt.history-nav {
     background: var(--error-bg);
     border: 1px solid var(--error-border);
     color: var(--error-text);
+}
+
+.fallback-msg {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    color: var(--warn-text);
 }

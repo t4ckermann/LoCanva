@@ -3,24 +3,25 @@ import { b64Mime, callGenerate, callOptimize } from "./api.js";
 import { HistoryManager, ImageEntry } from "./history.js";
 
 export interface UI {
-    themeToggle:            HTMLButtonElement;
-    prompt:                 HTMLTextAreaElement;
-    generateBtn:            HTMLButtonElement;
-    optimizeBtn:            HTMLButtonElement;
-    promptBar:              HTMLDivElement;
-    promptToggle:           HTMLButtonElement;
-    imageContainer:         HTMLDivElement;
-    generatedImage:         HTMLImageElement;
-    loadingOverlay:         HTMLDivElement;
-    loadingMsg:             HTMLSpanElement;
-    optimizedPromptDisplay: HTMLDivElement;
-    blockedMsg:             HTMLDivElement;
-    errorMsg:               HTMLDivElement;
-    downloadBtn:            HTMLButtonElement;
-    historyPanel:           HTMLDivElement;
-    historyToggle:          HTMLButtonElement;
-    historyCount:           HTMLSpanElement;
-    historyList:            HTMLDivElement;
+    themeToggle:     HTMLButtonElement;
+    prompt:          HTMLTextAreaElement;
+    generateBtn:     HTMLButtonElement;
+    optimizeOnlyBtn: HTMLButtonElement;
+    promptBar:       HTMLDivElement;
+    promptToggle:    HTMLButtonElement;
+    imageContainer:  HTMLDivElement;
+    generatedImage:  HTMLImageElement;
+    loadingOverlay:  HTMLDivElement;
+    loadingMsg:      HTMLSpanElement;
+    blockedMsg:      HTMLDivElement;
+    errorMsg:        HTMLDivElement;
+    enhanceBtn:      HTMLButtonElement;
+    fallbackMsg:     HTMLDivElement;
+    downloadBtn:     HTMLButtonElement;
+    historyPanel:    HTMLDivElement;
+    historyToggle:   HTMLButtonElement;
+    historyCount:    HTMLSpanElement;
+    historyList:     HTMLDivElement;
 }
 
 export class Controller {
@@ -60,7 +61,7 @@ export class Controller {
 
     private setControlsDisabled(disabled: boolean): void {
         this.ui.generateBtn.disabled = disabled;
-        this.ui.optimizeBtn.disabled = disabled;
+        this.ui.optimizeOnlyBtn.disabled = disabled;
         this.ui.historyToggle.disabled = disabled;
         this.ui.historyList.style.pointerEvents = disabled ? "none" : "";
     }
@@ -68,7 +69,7 @@ export class Controller {
     private clearMessages(): void {
         this.ui.blockedMsg.classList.add("hidden");
         this.ui.errorMsg.classList.add("hidden");
-        this.ui.optimizedPromptDisplay.classList.add("hidden");
+        this.ui.fallbackMsg.classList.add("hidden");
     }
 
     private showBlocked(message: string): void {
@@ -76,15 +77,14 @@ export class Controller {
         this.ui.blockedMsg.classList.remove("hidden");
     }
 
-    private showOptimized(original: string, optimized: string): void {
-        if (optimized === original) return;
-        this.ui.optimizedPromptDisplay.textContent = `Optimized Prompt: ${optimized}`;
-        this.ui.optimizedPromptDisplay.classList.remove("hidden");
-    }
-
     private showImage(src: string): void {
         this.ui.generatedImage.src = src;
         this.ui.imageContainer.classList.remove("hidden");
+    }
+
+    private showFallback(model: string): void {
+        this.ui.fallbackMsg.textContent = `Primary model failed — using fallback: ${model}`;
+        this.ui.fallbackMsg.classList.remove("hidden");
     }
 
     private showError(err: unknown): void {
@@ -133,6 +133,12 @@ export class Controller {
         this.showImage(entry.src);
         this.imageTitle = entry.title;
         this.ui.prompt.value = entry.prompt;
+        this.ui.enhanceBtn.classList.remove("hidden");
+    }
+
+    private enhance(): void {
+        this.setExpanded(true);
+        this.ui.prompt.focus();
     }
 
     private toggleHistoryPanel(): void {
@@ -161,38 +167,59 @@ export class Controller {
 
     // ── Generation ────────────────────────────────────────────────────────────
 
-    private async runGeneration(prompt: string, optimize: boolean): Promise<void> {
-        const optimizeResult = await callOptimize(prompt, optimize);
-        if (optimizeResult.blocked) { this.showBlocked(optimizeResult.message); return; }
-
-        const finalPrompt = optimizeResult.optimized;
-        if (optimize) this.showOptimized(prompt, finalPrompt);
-
-        this.setLoading(true, "Generating image — this may take a while…");
-        const { image, title } = await callGenerate(finalPrompt);
+    private async generate(prompt: string): Promise<void> {
+        const { image, title, fallback_model } = await callGenerate(prompt);
         this.imageTitle = title;
+        if (fallback_model) this.showFallback(fallback_model);
 
         const src = `data:${b64Mime(image)};base64,${image}`;
         this.showImage(src);
-        this.history.addImage({ prompt: finalPrompt, src, title });
+        this.ui.enhanceBtn.classList.remove("hidden");
+        this.history.addImage({ prompt, src, title });
         this.renderHistory();
         await this.history.save(prompt);
     }
 
-    private async run(optimize: boolean): Promise<void> {
+    private async runGenerate(): Promise<void> {
         const prompt = this.ui.prompt.value.trim();
         if (!prompt || this.isRunning) return;
 
         this.isRunning = true;
         this.history.resetNav();
         this.ui.prompt.classList.remove("history-nav");
+        this.ui.enhanceBtn.classList.add("hidden");
         this.setExpanded(false);
         this.clearMessages();
-        this.setLoading(true, optimize ? "Optimizing prompt…" : "Checking prompt…");
+        this.setLoading(true, "Generating image — this may take a while…");
         this.setControlsDisabled(true);
 
         try {
-            await this.runGeneration(prompt, optimize);
+            const check = await callOptimize(prompt, false);
+            if (check.blocked) { this.showBlocked(check.message); return; }
+            await this.generate(prompt);
+        } catch (err) {
+            this.showError(err);
+        } finally {
+            this.isRunning = false;
+            this.setLoading(false);
+            this.setControlsDisabled(false);
+        }
+    }
+
+    private async runOptimize(): Promise<void> {
+        const original = this.ui.prompt.value.trim();
+        if (!original || this.isRunning) return;
+
+        this.isRunning = true;
+        this.clearMessages();
+        this.setLoading(true, "Optimizing prompt…");
+        this.setControlsDisabled(true);
+
+        try {
+            const result = await callOptimize(original, true);
+            if (!result.blocked && result.optimized !== original) {
+                this.ui.prompt.value = result.optimized;
+            }
         } catch (err) {
             this.showError(err);
         } finally {
@@ -205,8 +232,6 @@ export class Controller {
     // ── Download ──────────────────────────────────────────────────────────────
 
     download(): void {
-        // TODO: prepend/append a user-defined prefix or suffix (stored in
-        // localStorage, restored on load) to this.imageTitle before downloading.
         const a = document.createElement("a");
         a.href = this.ui.generatedImage.src;
         a.download = this.imageTitle;
@@ -226,10 +251,10 @@ export class Controller {
             this.setExpanded(expanding);
             if (expanding) this.ui.prompt.focus();
         });
-        this.ui.generateBtn.addEventListener("click", () => this.run(false));
-        this.ui.optimizeBtn.addEventListener("click", () => this.run(true));
+        this.ui.generateBtn.addEventListener("click", () => this.runGenerate());
+        this.ui.optimizeOnlyBtn.addEventListener("click", () => this.runOptimize());
         this.ui.prompt.addEventListener("keydown", (e: KeyboardEvent) => {
-            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); this.run(true); }
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); this.runGenerate(); }
             if (e.key === "ArrowUp" || e.key === "ArrowDown") this.handleArrowNav(e);
         });
         this.ui.prompt.addEventListener("input", () => {
@@ -238,6 +263,7 @@ export class Controller {
                 this.ui.prompt.classList.remove("history-nav");
             }
         });
+        this.ui.enhanceBtn.addEventListener("click", () => this.enhance());
         this.ui.downloadBtn.addEventListener("click", () => this.download());
         this.ui.historyToggle.addEventListener("click", () => this.toggleHistoryPanel());
     }

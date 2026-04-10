@@ -21,10 +21,12 @@ def mock_chat_resp(content):
     return (m, None)
 
 
-def mock_generate_resp(images=None, response=""):
+def mock_generate_resp(images=None, response="", error=None):
     m = MagicMock()
     body = {}
-    if images is not None:
+    if error is not None:
+        body["error"] = error
+    elif images is not None:
         body["images"] = images
     else:
         body["response"] = response
@@ -63,7 +65,8 @@ class TestOptimize:
         assert data["blocked"] is True
         assert isinstance(data["message"], str) and data["message"]
 
-    def test_natural_language_refusal_is_blocked(self, client):
+    def test_natural_language_refusal_is_not_blocked(self, client):
+        # Only the literal "BLOCKED" token triggers a block; LLM prose is passed through.
         refusal = "I cannot create explicit content. Can I help you?"
         with patch("app.ollama_post", new=AsyncMock(return_value=mock_chat_resp(refusal))):
             resp = client.post(
@@ -71,8 +74,8 @@ class TestOptimize:
                 json={"prompt": "explicit content", "optimize": True},
             )
         data = resp.json()
-        assert data["blocked"] is True
-        assert isinstance(data["message"], str) and data["message"]
+        assert "blocked" not in data
+        assert data["optimized"] == refusal
 
     def test_blocked_response_has_no_optimized_field(self, client):
         # Frontend uses `data.blocked` to stop generation — verify the
@@ -181,22 +184,75 @@ class TestGenerate:
         assert resp.json()["title"] == "generated-image"
 
     def test_ollama_connection_error_returns_502(self, client):
-        with patch("app.ollama_post", new=AsyncMock(side_effect=[
-            err_resp("Cannot reach Ollama. Is it running?"),
-            err_resp("Cannot reach Ollama. Is it running?"),
-        ])):
-            resp = client.post("/api/generate", json={"prompt": "a cat"})
+        with patch.object(application, "IMAGE_MODEL_FALLBACK", ""):
+            with patch("app.ollama_post", new=AsyncMock(side_effect=[
+                err_resp("Cannot reach Ollama. Is it running?"),
+                err_resp("Cannot reach Ollama. Is it running?"),
+            ])):
+                resp = client.post("/api/generate", json={"prompt": "a cat"})
         assert resp.status_code == 502
         assert "Ollama" in resp.json()["error"]
 
     def test_ollama_404_returns_502_with_hint(self, client):
+        with patch.object(application, "IMAGE_MODEL_FALLBACK", ""):
+            with patch("app.ollama_post", new=AsyncMock(side_effect=[
+                err_resp("Model not found in Ollama. Is it pulled?"),
+                err_resp("Model not found in Ollama. Is it pulled?"),
+            ])):
+                resp = client.post("/api/generate", json={"prompt": "a cat"})
+        assert resp.status_code == 502
+        assert "pulled" in resp.json()["error"].lower()
+
+    def test_falls_back_to_fallback_model_on_error(self, client):
+        with patch.object(application, "IMAGE_MODEL_FALLBACK", "x/flux2-klein"):
+            with patch("app.ollama_post", new=AsyncMock(side_effect=[
+                mock_chat_resp("a-cat"),
+                err_resp("mlx runner failed"),
+                mock_generate_resp(images=["fallbackdata"]),
+            ])):
+                resp = client.post("/api/generate", json={"prompt": "a cat"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["image"] == "fallbackdata"
+        assert data["fallback_model"] == "x/flux2-klein"
+
+    def test_no_fallback_when_fallback_model_not_set(self, client):
+        with patch.object(application, "IMAGE_MODEL_FALLBACK", ""):
+            with patch("app.ollama_post", new=AsyncMock(side_effect=[
+                mock_chat_resp("a-cat"),
+                err_resp("mlx runner failed"),
+            ])):
+                resp = client.post("/api/generate", json={"prompt": "a cat"})
+        assert resp.status_code == 502
+
+    def test_fallback_model_not_in_response_on_success(self, client):
+        with patch.object(application, "IMAGE_MODEL_FALLBACK", "x/flux2-klein"):
+            with patch("app.ollama_post", new=AsyncMock(side_effect=[
+                mock_chat_resp("a-cat"),
+                mock_generate_resp(images=["data"]),
+            ])):
+                resp = client.post("/api/generate", json={"prompt": "a cat"})
+        assert resp.status_code == 200
+        assert "fallback_model" not in resp.json()
+
+    def test_ollama_body_error_returns_502(self, client):
+        with patch.object(application, "IMAGE_MODEL_FALLBACK", ""):
+            with patch("app.ollama_post", new=AsyncMock(side_effect=[
+                mock_chat_resp("a-cat"),
+                mock_generate_resp(error="model does not support image generation"),
+            ])):
+                resp = client.post("/api/generate", json={"prompt": "a cat"})
+        assert resp.status_code == 502
+        assert "model does not support image generation" in resp.json()["error"]
+
+    def test_empty_image_returns_502(self, client):
         with patch("app.ollama_post", new=AsyncMock(side_effect=[
-            err_resp("Model not found in Ollama. Is it pulled?"),
-            err_resp("Model not found in Ollama. Is it pulled?"),
+            mock_chat_resp("a-cat"),
+            mock_generate_resp(response=""),
         ])):
             resp = client.post("/api/generate", json={"prompt": "a cat"})
         assert resp.status_code == 502
-        assert "pulled" in resp.json()["error"].lower()
+        assert "no image" in resp.json()["error"].lower()
 
     def test_image_not_written_to_disk(self, client):
         static_dir = os.path.join(os.path.dirname(__file__), "..", "static")

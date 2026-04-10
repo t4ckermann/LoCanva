@@ -14,7 +14,9 @@ export async function callOptimize(prompt: string, optimize: boolean): Promise<O
     return { blocked: false, optimized: data.optimized ?? prompt };
 }
 
-export async function callGenerate(prompt: string): Promise<{ image: string; title: string }> {
+export async function callGenerate(
+    prompt: string,
+): Promise<{ image: string; title: string; fallback_model?: string }> {
     const resp = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -22,7 +24,11 @@ export async function callGenerate(prompt: string): Promise<{ image: string; tit
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
-    return { image: data.image as string, title: (data.title as string) || "generated-image" };
+    return {
+        image: data.image as string,
+        title: (data.title as string) || "generated-image",
+        fallback_model: data.fallback_model as string | undefined,
+    };
 }
 
 export function b64Mime(b64: string): string {

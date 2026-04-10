@@ -8,6 +8,19 @@ A locally-hosted canvas app powered by [Ollama](https://ollama.com).
 - [Node.js](https://nodejs.org) (LTS) — managed via [nvm](https://github.com/nvm-sh/nvm)
 - [Ollama](https://ollama.com) running locally
 
+### Hardware
+
+> **macOS (Apple Silicon) only** — Ollama's image generation support is currently macOS-only. Linux and Windows are not yet supported.
+
+The image models (`x/z-image-turbo` at ~12–16 GB, `x/flux2-klein` at ~13 GB) are loaded into unified memory alongside the OS and other processes, so the effective floor is higher than the model size alone:
+
+| Unified memory | Outcome |
+|----------------|---------|
+| 16 GB          | Likely too little — reported to fall short by a few hundred MB in practice |
+| 20 GB or more  | Confirmed working |
+
+Intel Macs and non-Apple hardware are not supported for image generation at this time.
+
 ## Setup
 
 **Environment**
@@ -20,7 +33,8 @@ cp .env.example .env  # then edit .env as needed
 
 ```bash
 ollama pull x/z-image-turbo  # image generation (IMAGE_MODEL)
-ollama pull llama3.2       # prompt optimization (PROMPT_MODEL)
+ollama pull x/flux2-klein    # fallback image model (IMAGE_MODEL_FALLBACK)
+ollama pull llama3.2         # prompt optimization (PROMPT_MODEL)
 ```
 
 **Node.js (frontend tooling)**
@@ -68,8 +82,9 @@ The server starts at `http://127.0.0.1:1337` by default.
 | `HOST`            | `127.0.0.1`               | Bind address                             |
 | `PORT`            | `1337`                    | Listen port                              |
 | `OLLAMA_BASE_URL` | `http://localhost:11434`  | Ollama API base URL                      |
-| `IMAGE_MODEL`     | `x/z-image-turbo`           | Ollama model used for image generation   |
-| `PROMPT_MODEL`    | `llama3.2`                | Ollama model used for prompt optimization and safety filtering |
+| `IMAGE_MODEL`          | `x/z-image-turbo`        | Ollama model used for image generation   |
+| `IMAGE_MODEL_FALLBACK` | `""` (disabled)          | Fallback image model tried automatically if `IMAGE_MODEL` fails |
+| `PROMPT_MODEL`         | `llama3.2`               | Ollama model used for prompt optimization and safety filtering |
 
 ## Network access
 

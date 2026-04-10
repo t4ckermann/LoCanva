@@ -18,6 +18,7 @@ templates = Jinja2Templates(directory="templates")
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "x/z-image-turbo")
+IMAGE_MODEL_FALLBACK = os.environ.get("IMAGE_MODEL_FALLBACK", "")
 PROMPT_MODEL = os.environ.get("PROMPT_MODEL", "llama3.2")
 
 if not IMAGE_MODEL:
@@ -86,17 +87,23 @@ _BLOCK_MESSAGES = [
     "I was built for art, not objectification. Elevate your game.",
 ]
 
-_REFUSAL_PREFIXES = (
-    "blocked",
-    "i cannot", "i can't", "i won't", "i will not",
-    "i'm unable", "i am unable", "i'm sorry", "i am sorry",
-    "sorry,", "sorry.", "apologies,",
-)
-
 
 def _is_refusal(text: str) -> bool:
-    lower = text.lower()
-    return any(lower.startswith(p) for p in _REFUSAL_PREFIXES)
+    return text.strip().upper() == "BLOCKED"
+
+
+async def _try_generate_image(model: str, prompt: str):
+    """Attempt image generation with a single model; returns (body, err)."""
+    resp, err = await ollama_post(
+        ollama_url("/api/generate"),
+        json={"model": model, "prompt": prompt, "stream": False},
+    )
+    if err:
+        return None, err
+    body = resp.json()
+    if body.get("error"):
+        return None, {"error": body["error"]}
+    return body, None
 
 
 async def ollama_post(url, **kwargs):
@@ -190,20 +197,29 @@ async def generate(body: GenerateRequest):
     if not title_err:
         title = _slugify(title_resp.json()["message"]["content"])
 
-    resp, err = await ollama_post(
-        ollama_url("/api/generate"),
-        json={"model": IMAGE_MODEL, "prompt": prompt, "stream": False},
-    )
+    body_data, err = await _try_generate_image(IMAGE_MODEL, prompt)
+    fallback_model = None
+    if err and IMAGE_MODEL_FALLBACK:
+        fallback_model = IMAGE_MODEL_FALLBACK
+        body_data, err = await _try_generate_image(IMAGE_MODEL_FALLBACK, prompt)
     if err:
         return JSONResponse(err, status_code=502)
 
-    body_data = resp.json()
     images = body_data.get("images")
     image_data = (
         images[0] if images
         else body_data.get("image", body_data.get("response", ""))
     )
-    return JSONResponse({"image": image_data, "title": title})
+    if not image_data:
+        return JSONResponse(
+            {"error": "Ollama returned no image. "
+                      "Does the model support image generation?"},
+            status_code=502,
+        )
+    result = {"image": image_data, "title": title}
+    if fallback_model:
+        result["fallback_model"] = fallback_model
+    return JSONResponse(result)
 
 
 if __name__ == "__main__":

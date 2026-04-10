@@ -3,26 +3,25 @@ import { b64Mime, callGenerate, callOptimize } from "./api.js";
 import { HistoryManager, ImageEntry } from "./history.js";
 
 export interface UI {
-    themeToggle:            HTMLButtonElement;
-    prompt:                 HTMLTextAreaElement;
-    generateBtn:            HTMLButtonElement;
-    optimizeOnlyBtn:        HTMLButtonElement;
-    promptBar:              HTMLDivElement;
-    promptToggle:           HTMLButtonElement;
-    imageContainer:         HTMLDivElement;
-    generatedImage:         HTMLImageElement;
-    loadingOverlay:         HTMLDivElement;
-    loadingMsg:             HTMLSpanElement;
-    optimizedPromptDisplay: HTMLDivElement;
-    blockedMsg:             HTMLDivElement;
-    errorMsg:               HTMLDivElement;
-    enhanceBtn:             HTMLButtonElement;
-    fallbackMsg:            HTMLDivElement;
-    downloadBtn:            HTMLButtonElement;
-    historyPanel:           HTMLDivElement;
-    historyToggle:          HTMLButtonElement;
-    historyCount:           HTMLSpanElement;
-    historyList:            HTMLDivElement;
+    themeToggle:     HTMLButtonElement;
+    prompt:          HTMLTextAreaElement;
+    generateBtn:     HTMLButtonElement;
+    optimizeOnlyBtn: HTMLButtonElement;
+    promptBar:       HTMLDivElement;
+    promptToggle:    HTMLButtonElement;
+    imageContainer:  HTMLDivElement;
+    generatedImage:  HTMLImageElement;
+    loadingOverlay:  HTMLDivElement;
+    loadingMsg:      HTMLSpanElement;
+    blockedMsg:      HTMLDivElement;
+    errorMsg:        HTMLDivElement;
+    enhanceBtn:      HTMLButtonElement;
+    fallbackMsg:     HTMLDivElement;
+    downloadBtn:     HTMLButtonElement;
+    historyPanel:    HTMLDivElement;
+    historyToggle:   HTMLButtonElement;
+    historyCount:    HTMLSpanElement;
+    historyList:     HTMLDivElement;
 }
 
 export class Controller {
@@ -71,18 +70,11 @@ export class Controller {
         this.ui.blockedMsg.classList.add("hidden");
         this.ui.errorMsg.classList.add("hidden");
         this.ui.fallbackMsg.classList.add("hidden");
-        this.ui.optimizedPromptDisplay.classList.add("hidden");
     }
 
     private showBlocked(message: string): void {
         this.ui.blockedMsg.textContent = message;
         this.ui.blockedMsg.classList.remove("hidden");
-    }
-
-    private showOptimized(original: string, optimized: string): void {
-        if (optimized === original) return;
-        this.ui.optimizedPromptDisplay.textContent = `Optimized Prompt: ${optimized}`;
-        this.ui.optimizedPromptDisplay.classList.remove("hidden");
     }
 
     private showImage(src: string): void {
@@ -175,26 +167,7 @@ export class Controller {
 
     // ── Generation ────────────────────────────────────────────────────────────
 
-    // Returns the (possibly optimized) prompt, or null if blocked.
-    private async resolvePrompt(prompt: string, optimize: boolean): Promise<string | null> {
-        const result = await callOptimize(prompt, optimize);
-        if (result.blocked) { this.showBlocked(result.message); return null; }
-        return result.optimized;
-    }
-
-    // Optimizes textarea in-place. Returns false if blocked.
-    private async optimize(): Promise<boolean> {
-        const original = this.ui.prompt.value.trim();
-        const optimized = await this.resolvePrompt(original, true);
-        if (optimized === null) return false;
-        if (optimized !== original) this.ui.prompt.value = optimized;
-        return true;
-    }
-
-    private async generate(originalPrompt: string): Promise<void> {
-        const prompt = this.ui.prompt.value.trim();
-        this.showOptimized(originalPrompt, prompt);
-        this.setLoading(true, "Generating image — this may take a while…");
+    private async generate(prompt: string): Promise<void> {
         const { image, title, fallback_model } = await callGenerate(prompt);
         this.imageTitle = title;
         if (fallback_model) this.showFallback(fallback_model);
@@ -204,37 +177,49 @@ export class Controller {
         this.ui.enhanceBtn.classList.remove("hidden");
         this.history.addImage({ prompt, src, title });
         this.renderHistory();
-        await this.history.save(originalPrompt);
+        await this.history.save(prompt);
     }
 
-    // Chains optimize (if requested) with optional generation.
-    // Handles the blocked-content check for the plain-generate path.
-    private async executeSteps(withOptimize: boolean, withGenerate: boolean, originalPrompt: string): Promise<void> {
-        if (withOptimize) {
-            if (!await this.optimize()) return;
-        } else if (withGenerate) {
-            if (await this.resolvePrompt(originalPrompt, false) === null) return;
-        }
-        if (withGenerate) await this.generate(originalPrompt);
-    }
-
-    private async run(withOptimize: boolean, withGenerate = true): Promise<void> {
-        const originalPrompt = this.ui.prompt.value.trim();
-        if (!originalPrompt || this.isRunning) return;
+    private async runGenerate(): Promise<void> {
+        const prompt = this.ui.prompt.value.trim();
+        if (!prompt || this.isRunning) return;
 
         this.isRunning = true;
-        if (withGenerate) {
-            this.history.resetNav();
-            this.ui.prompt.classList.remove("history-nav");
-            this.ui.enhanceBtn.classList.add("hidden");
-            this.setExpanded(false);
-        }
+        this.history.resetNav();
+        this.ui.prompt.classList.remove("history-nav");
+        this.ui.enhanceBtn.classList.add("hidden");
+        this.setExpanded(false);
         this.clearMessages();
-        this.setLoading(true, withOptimize ? "Optimizing prompt…" : "Checking prompt…");
+        this.setLoading(true, "Generating image — this may take a while…");
         this.setControlsDisabled(true);
 
         try {
-            await this.executeSteps(withOptimize, withGenerate, originalPrompt);
+            const check = await callOptimize(prompt, false);
+            if (check.blocked) { this.showBlocked(check.message); return; }
+            await this.generate(prompt);
+        } catch (err) {
+            this.showError(err);
+        } finally {
+            this.isRunning = false;
+            this.setLoading(false);
+            this.setControlsDisabled(false);
+        }
+    }
+
+    private async runOptimize(): Promise<void> {
+        const original = this.ui.prompt.value.trim();
+        if (!original || this.isRunning) return;
+
+        this.isRunning = true;
+        this.clearMessages();
+        this.setLoading(true, "Optimizing prompt…");
+        this.setControlsDisabled(true);
+
+        try {
+            const result = await callOptimize(original, true);
+            if (!result.blocked && result.optimized !== original) {
+                this.ui.prompt.value = result.optimized;
+            }
         } catch (err) {
             this.showError(err);
         } finally {
@@ -247,8 +232,6 @@ export class Controller {
     // ── Download ──────────────────────────────────────────────────────────────
 
     download(): void {
-        // TODO: prepend/append a user-defined prefix or suffix (stored in
-        // localStorage, restored on load) to this.imageTitle before downloading.
         const a = document.createElement("a");
         a.href = this.ui.generatedImage.src;
         a.download = this.imageTitle;
@@ -268,10 +251,10 @@ export class Controller {
             this.setExpanded(expanding);
             if (expanding) this.ui.prompt.focus();
         });
-        this.ui.generateBtn.addEventListener("click", () => this.run(false));
-        this.ui.optimizeOnlyBtn.addEventListener("click", () => this.run(true, false));
+        this.ui.generateBtn.addEventListener("click", () => this.runGenerate());
+        this.ui.optimizeOnlyBtn.addEventListener("click", () => this.runOptimize());
         this.ui.prompt.addEventListener("keydown", (e: KeyboardEvent) => {
-            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); this.run(true); }
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); this.runGenerate(); }
             if (e.key === "ArrowUp" || e.key === "ArrowDown") this.handleArrowNav(e);
         });
         this.ui.prompt.addEventListener("input", () => {

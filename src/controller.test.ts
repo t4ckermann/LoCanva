@@ -9,6 +9,8 @@ vi.mock("./api.js", () => ({
 
 import { callOptimize, callGenerate } from "./api.js";
 
+beforeEach(() => { vi.clearAllMocks(); });
+
 // ── DOM fixture ───────────────────────────────────────────────────────────────
 
 function makeUI(): UI {
@@ -17,7 +19,6 @@ function makeUI(): UI {
         <textarea id="prompt"></textarea>
         <button id="generate-btn"></button>
         <button id="optimize-only-btn"></button>
-        <button id="optimize-btn"></button>
         <div id="prompt-bar" class="expanded"></div>
         <button id="prompt-toggle"></button>
 
@@ -28,7 +29,6 @@ function makeUI(): UI {
         </div>
         <div id="loading-overlay" class="hidden"></div>
         <span id="loading-msg"></span>
-        <div id="optimized-prompt-display" class="hidden"></div>
         <div id="blocked-msg" class="hidden"></div>
         <div id="error-msg" class="hidden"></div>
         <div id="fallback-msg" class="hidden"></div>
@@ -38,26 +38,25 @@ function makeUI(): UI {
         <div id="history-list"></div>
     `;
     return {
-        themeToggle:            document.getElementById("theme-toggle")             as HTMLButtonElement,
-        prompt:                 document.getElementById("prompt")                   as HTMLTextAreaElement,
-        generateBtn:            document.getElementById("generate-btn")             as HTMLButtonElement,
-        optimizeOnlyBtn:        document.getElementById("optimize-only-btn")        as HTMLButtonElement,
-        promptBar:              document.getElementById("prompt-bar")               as HTMLDivElement,
-        promptToggle:           document.getElementById("prompt-toggle")            as HTMLButtonElement,
-        imageContainer:         document.getElementById("image-container")          as HTMLDivElement,
-        generatedImage:         document.getElementById("generated-image")          as HTMLImageElement,
-        loadingOverlay:         document.getElementById("loading-overlay")          as HTMLDivElement,
-        loadingMsg:             document.getElementById("loading-msg")              as HTMLSpanElement,
-        optimizedPromptDisplay: document.getElementById("optimized-prompt-display") as HTMLDivElement,
-        blockedMsg:             document.getElementById("blocked-msg")              as HTMLDivElement,
-        errorMsg:               document.getElementById("error-msg")                as HTMLDivElement,
-        fallbackMsg:            document.getElementById("fallback-msg")             as HTMLDivElement,
-        enhanceBtn:             document.getElementById("enhance-btn")              as HTMLButtonElement,
-        downloadBtn:            document.getElementById("download-btn")             as HTMLButtonElement,
-        historyPanel:           document.getElementById("history-panel")            as HTMLDivElement,
-        historyToggle:          document.getElementById("history-toggle")           as HTMLButtonElement,
-        historyCount:           document.getElementById("history-count")            as HTMLSpanElement,
-        historyList:            document.getElementById("history-list")             as HTMLDivElement,
+        themeToggle:     document.getElementById("theme-toggle")      as HTMLButtonElement,
+        prompt:          document.getElementById("prompt")            as HTMLTextAreaElement,
+        generateBtn:     document.getElementById("generate-btn")      as HTMLButtonElement,
+        optimizeOnlyBtn: document.getElementById("optimize-only-btn") as HTMLButtonElement,
+        promptBar:       document.getElementById("prompt-bar")        as HTMLDivElement,
+        promptToggle:    document.getElementById("prompt-toggle")     as HTMLButtonElement,
+        imageContainer:  document.getElementById("image-container")   as HTMLDivElement,
+        generatedImage:  document.getElementById("generated-image")   as HTMLImageElement,
+        loadingOverlay:  document.getElementById("loading-overlay")   as HTMLDivElement,
+        loadingMsg:      document.getElementById("loading-msg")       as HTMLSpanElement,
+        blockedMsg:      document.getElementById("blocked-msg")       as HTMLDivElement,
+        errorMsg:        document.getElementById("error-msg")         as HTMLDivElement,
+        fallbackMsg:     document.getElementById("fallback-msg")      as HTMLDivElement,
+        enhanceBtn:      document.getElementById("enhance-btn")       as HTMLButtonElement,
+        downloadBtn:     document.getElementById("download-btn")      as HTMLButtonElement,
+        historyPanel:    document.getElementById("history-panel")     as HTMLDivElement,
+        historyToggle:   document.getElementById("history-toggle")    as HTMLButtonElement,
+        historyCount:    document.getElementById("history-count")     as HTMLSpanElement,
+        historyList:     document.getElementById("history-list")      as HTMLDivElement,
     };
 }
 
@@ -235,6 +234,61 @@ describe("optimize only", () => {
         ui.optimizeOnlyBtn.click();
         await vi.waitFor(() => expect(ui.optimizeOnlyBtn.disabled).toBe(false));
         expect(ui.prompt.value).toBe("a cat");
+    });
+
+    it("does not generate an image", async () => {
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.optimizeOnlyBtn.click();
+        await vi.waitFor(() => expect(ui.optimizeOnlyBtn.disabled).toBe(false));
+        expect(callGenerate).not.toHaveBeenCalled();
+    });
+
+    it("does not show blocked message even when API returns blocked", async () => {
+        vi.mocked(callOptimize).mockResolvedValue({ blocked: true, message: "Not allowed" });
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.optimizeOnlyBtn.click();
+        await vi.waitFor(() => expect(ui.optimizeOnlyBtn.disabled).toBe(false));
+        expect(ui.blockedMsg.classList.contains("hidden")).toBe(true);
+    });
+});
+
+// ── Enter key ─────────────────────────────────────────────────────────────────
+
+describe("Enter key", () => {
+    let ui: UI;
+
+    beforeEach(() => {
+        ui = makeUI();
+        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callGenerate).mockResolvedValue({ image: "iVBORabc", title: "a-cat" });
+    });
+
+    it("generates an image without optimizing", async () => {
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.prompt.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+        await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
+
+        expect(callOptimize).toHaveBeenCalledWith("a cat", false);
+        expect(callGenerate).toHaveBeenCalled();
+    });
+
+    it("does not generate when Shift+Enter is pressed", () => {
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a cat";
+
+        ui.prompt.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true }));
+        expect(callOptimize).not.toHaveBeenCalled();
+        expect(callGenerate).not.toHaveBeenCalled();
     });
 });
 

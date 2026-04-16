@@ -41,11 +41,10 @@ function makeUI(): UI {
 
         <button id="tab-generate" class="tab active"></button>
         <button id="tab-describe" class="tab"></button>
-        <div id="generate-panel"></div>
-        <div id="describe-panel" class="hidden"></div>
+        <div id="generate-panel" class="prompt-panel"></div>
+        <div id="describe-panel" class="prompt-panel hidden"></div>
+        <div id="upload-zone"><img id="upload-preview" class="hidden"></div>
         <input type="file" id="image-upload">
-        <button id="upload-trigger-btn"></button>
-        <img id="upload-preview" class="hidden">
         <button id="describe-btn" disabled></button>
         <button id="use-as-prompt-btn" class="hidden"></button>
         <div id="describe-result" class="hidden"></div>
@@ -367,9 +366,9 @@ describe("describe tab", () => {
         expect(ui.describeBtn.disabled).toBe(true);
     });
 
-    it("upload trigger button clicks the file input", () => {
+    it("clicking the upload zone triggers the file input", () => {
         const clickSpy = vi.spyOn(ui.imageUpload, "click");
-        ui.uploadTriggerBtn.click();
+        ui.uploadZone.click();
         expect(clickSpy).toHaveBeenCalledOnce();
     });
 
@@ -398,6 +397,27 @@ describe("describe tab", () => {
 
         expect(ui.prompt.value).toBe("A fluffy cat on a mat.");
         expect(ui.generatePanel.classList.contains("hidden")).toBe(false);
+    });
+
+    it("collapses prompt bar during describe and re-expands after", async () => {
+        Object.defineProperty(ui.imageUpload, "files", {
+            value: [new File(["data"], "test.png", { type: "image/png" })],
+            configurable: true,
+        });
+        ui.imageUpload.dispatchEvent(new Event("change"));
+        await vi.waitFor(() => expect(ui.describeBtn.disabled).toBe(false));
+
+        ui.describeBtn.click();
+        expect(ui.promptBar.classList.contains("expanded")).toBe(false);
+        await vi.waitFor(() => expect(ui.promptBar.classList.contains("expanded")).toBe(true));
+    });
+
+    it("drag-over adds drag-over class and drop handles file", () => {
+        ui.uploadZone.dispatchEvent(new DragEvent("dragover", { bubbles: true }));
+        expect(ui.uploadZone.classList.contains("drag-over")).toBe(true);
+
+        ui.uploadZone.dispatchEvent(new DragEvent("dragleave", { bubbles: true }));
+        expect(ui.uploadZone.classList.contains("drag-over")).toBe(false);
     });
 
     it("describe error shows error message", async () => {

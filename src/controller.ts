@@ -244,6 +244,7 @@ export class Controller {
 
         this.isRunning = true;
         this.clearMessages();
+        this.setExpanded(false);
         this.setLoading(true, "Describing image…");
         this.setControlsDisabled(true);
 
@@ -258,6 +259,7 @@ export class Controller {
             this.isRunning = false;
             this.setLoading(false);
             this.setControlsDisabled(false);
+            this.setExpanded(true);
         }
     }
 
@@ -310,7 +312,20 @@ export class Controller {
     private bindDescribeEvents(): void {
         this.ui.tabGenerate.addEventListener("click", () => this.switchTab("generate"));
         this.ui.tabDescribe.addEventListener("click", () => this.switchTab("describe"));
-        this.ui.uploadTriggerBtn.addEventListener("click", () => this.ui.imageUpload.click());
+        this.ui.uploadZone.addEventListener("click", () => this.ui.imageUpload.click());
+        this.ui.uploadZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            this.ui.uploadZone.classList.add("drag-over");
+        });
+        this.ui.uploadZone.addEventListener("dragleave", () => {
+            this.ui.uploadZone.classList.remove("drag-over");
+        });
+        this.ui.uploadZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            this.ui.uploadZone.classList.remove("drag-over");
+            const file = e.dataTransfer?.files[0];
+            if (file) this.handleFileSelect(file);
+        });
         this.ui.imageUpload.addEventListener("change", (e) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (file) this.handleFileSelect(file);

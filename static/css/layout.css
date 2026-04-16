@@ -111,7 +111,7 @@ body:has(#loading-overlay:not(.hidden)) .logo {
     gap: 8px;
 }
 
-#generate-panel {
+.prompt-panel {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 8px;
@@ -155,11 +155,12 @@ textarea#prompt:focus {
         margin-top: 66px;
     }
 
-    #generate-panel {
+    .prompt-panel {
         grid-template-columns: 1fr;
     }
 
-    textarea#prompt {
+    textarea#prompt,
+    .upload-zone {
         min-height: 72px;
     }
 

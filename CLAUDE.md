@@ -74,6 +74,13 @@ This project follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PA
 
 When adding a new Python library, always add it to `requirements.txt` in the same task. FastAPI does not bundle optional dependencies (e.g. `jinja2`, `python-multipart`) — they must be listed explicitly.
 
+## UI/UX Conventions
+
+- **Panel layout**: the Generate and Describe panels both use `.prompt-panel` — a two-column grid (`1fr auto`) with a content area on the left and a `.buttons` column on the right. Any new panel-style section must use `.prompt-panel` to stay consistent.
+- **Buttons column**: use `.buttons` for the right-hand action column. Secondary action first (top), primary action last (bottom). Contextual buttons (`Use as Prompt`, `Enhance`) start `hidden` and are revealed by the controller — never show them unconditionally.
+- **Upload zones**: use `.upload-zone` for image input areas. They must match `textarea#prompt` dimensions (`min-height`), support click-to-open and drag-and-drop, and carry a `.upload-hint` child for the empty state. Hide the hint via CSS (`:has(#upload-preview:not(.hidden))`) — never toggle it from JS.
+- **Loading**: call `setExpanded(false)` at the start of any async operation so the loading spinner in the image area is fully visible. Only call `setExpanded(true)` afterwards when the result appears inside the prompt bar (e.g. describe result). Generation results appear in the image area, so the bar stays collapsed.
+
 ## Architecture
 
 - **`app.py`** — FastAPI entrypoint. Serves `templates/index.html` at `/`. Talks to Ollama via `OLLAMA_BASE_URL`. Config via env vars (supports `.env`).

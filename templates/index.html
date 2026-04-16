@@ -24,22 +24,25 @@
                     <button id="tab-generate" class="tab active" role="tab" aria-selected="true">Generate</button>
                     <button id="tab-describe" class="tab" role="tab" aria-selected="false">Describe</button>
                 </div>
-                <div id="generate-panel" role="tabpanel">
+                <div id="generate-panel" class="prompt-panel" role="tabpanel">
                     <textarea id="prompt" placeholder="Describe the image you want to generate…" rows="3"></textarea>
                     <div class="buttons">
                         <button id="optimize-only-btn">Optimize Prompt</button>
                         <button id="generate-btn">Generate</button>
                     </div>
                 </div>
-                <div id="describe-panel" class="hidden" role="tabpanel">
-                    <div class="upload-area">
-                        <button id="upload-trigger-btn">
-                            <span class="material-icon">upload</span> Choose Image
-                        </button>
+                <div id="describe-panel" class="prompt-panel hidden" role="tabpanel">
+                    <div class="describe-content">
+                        <div class="upload-zone" id="upload-zone">
+                            <div class="upload-hint">
+                                <span class="material-icon">upload</span>
+                                Drop image or click to upload
+                            </div>
+                            <img id="upload-preview" class="hidden" alt="Preview of uploaded image">
+                        </div>
                         <input type="file" id="image-upload" accept="image/*" class="hidden">
-                        <img id="upload-preview" class="hidden" alt="Preview of uploaded image">
+                        <div id="describe-result" class="hidden"></div>
                     </div>
-                    <div id="describe-result" class="hidden"></div>
                     <div class="buttons">
                         <button id="describe-btn" disabled>Describe</button>
                         <button id="use-as-prompt-btn" class="hidden">Use as Prompt</button>

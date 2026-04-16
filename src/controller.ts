@@ -30,7 +30,6 @@ export class Controller {
 
     private setExpanded(expanded: boolean): void {
         this.ui.promptBar.classList.toggle("expanded", expanded);
-        this.ui.promptToggle.setAttribute("aria-expanded", String(expanded));
     }
 
     // ── Loading / messages ────────────────────────────────────────────────────
@@ -214,6 +213,11 @@ export class Controller {
     // ── Describe tab ─────────────────────────────────────────────────────────
 
     private switchTab(tab: "generate" | "describe"): void {
+        const activeBtn = tab === "generate" ? this.ui.tabGenerate : this.ui.tabDescribe;
+        if (activeBtn.classList.contains("active") && this.ui.promptBar.classList.contains("expanded")) {
+            this.setExpanded(false);
+            return;
+        }
         const isGenerate = tab === "generate";
         this.ui.generatePanel.classList.toggle("hidden", !isGenerate);
         this.ui.describePanel.classList.toggle("hidden", isGenerate);
@@ -268,6 +272,34 @@ export class Controller {
         if (!description) return;
         this.ui.prompt.value = description;
         this.switchTab("generate");
+        this.expandTextareaIfNeeded();
+    }
+
+    // ── Textarea expand ───────────────────────────────────────────────────────
+
+    private syncExpandBtn(): void {
+        const ta = this.ui.prompt;
+        this.ui.textareaWrap.classList.toggle("has-overflow", ta.scrollHeight > ta.clientHeight);
+    }
+
+    private expandTextareaIfNeeded(): void {
+        const ta = this.ui.prompt;
+        if (ta.scrollHeight <= ta.clientHeight) return;
+        this.ui.textareaWrap.classList.add("is-expanded", "has-overflow");
+        ta.style.height = `${ta.scrollHeight}px`;
+    }
+
+    private toggleTextareaExpand(): void {
+        const wrap = this.ui.textareaWrap;
+        const ta = this.ui.prompt;
+        const expanding = !wrap.classList.contains("is-expanded");
+        wrap.classList.toggle("is-expanded", expanding);
+        if (expanding) {
+            ta.style.height = `${ta.scrollHeight}px`;
+        } else {
+            ta.style.height = "";
+            this.syncExpandBtn();
+        }
     }
 
     // ── Download ──────────────────────────────────────────────────────────────
@@ -287,11 +319,6 @@ export class Controller {
             settings.theme = next;
             this.applyTheme(next);
         });
-        this.ui.promptToggle.addEventListener("click", () => {
-            const expanding = !this.ui.promptBar.classList.contains("expanded");
-            this.setExpanded(expanding);
-            if (expanding) this.ui.prompt.focus();
-        });
         this.ui.generateBtn.addEventListener("click", () => this.runGenerate());
         this.ui.optimizeOnlyBtn.addEventListener("click", () => this.runOptimize());
         this.ui.prompt.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -303,7 +330,9 @@ export class Controller {
                 this.history.resetNav();
                 this.ui.prompt.classList.remove("history-nav");
             }
+            this.syncExpandBtn();
         });
+        this.ui.textareaExpandBtn.addEventListener("click", () => this.toggleTextareaExpand());
         this.ui.enhanceBtn.addEventListener("click", () => this.enhance());
         this.ui.downloadBtn.addEventListener("click", () => this.download());
         this.ui.historyToggle.addEventListener("click", () => this.toggleHistoryPanel());

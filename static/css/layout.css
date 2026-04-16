@@ -74,26 +74,9 @@ body:has(#loading-overlay:not(.hidden)) .logo {
     animation: spin 0.85s linear infinite;
 }
 
-.prompt-toggle {
-    display: flex;
-    align-items: center;
-    gap: var(--gap);
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    transition: color 0.15s;
-}
-
-.prompt-toggle .material-icon {
-    transition: transform 0.25s ease;
-}
-
-.prompt-bar.expanded .prompt-toggle .material-icon {
-    transform: rotate(180deg);
-}
-
-.prompt-toggle:hover:not(:disabled) {
-    color: var(--text);
+.prompt-bar-header .tab-bar {
+    flex: 1;
+    padding: 0 8px;
 }
 
 #theme-toggle {
@@ -122,6 +105,10 @@ body:has(#loading-overlay:not(.hidden)) .logo {
     display: none;
 }
 
+.textarea-wrap {
+    position: relative;
+}
+
 textarea#prompt {
     width: 100%;
     background: var(--bg);
@@ -134,10 +121,15 @@ textarea#prompt {
     line-height: 1.5;
     outline: none;
     min-height: 104px;
+    overflow: hidden;
 }
 
 textarea#prompt:focus {
     border-color: var(--accent);
+}
+
+.textarea-wrap.is-expanded textarea#prompt {
+    overflow-y: auto;
 }
 
 /* Mobile */
@@ -161,6 +153,10 @@ textarea#prompt:focus {
 
     textarea#prompt,
     .upload-zone {
+        min-height: 72px;
+    }
+
+    .textarea-wrap.is-expanded textarea#prompt {
         min-height: 72px;
     }
 

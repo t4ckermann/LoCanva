@@ -190,8 +190,6 @@ button:hover:not(:disabled) {
 .tab-bar {
     display: flex;
     gap: 4px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 8px;
 }
 
 .tab {
@@ -263,6 +261,46 @@ button:hover:not(:disabled) {
     max-height: 200px;
     object-fit: contain;
     display: block;
+}
+
+/* Textarea expand button */
+
+.textarea-expand-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    min-height: unset;
+    padding: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius);
+    opacity: 0.5;
+    transition: opacity 0.15s;
+}
+
+.textarea-wrap.has-overflow .textarea-expand-btn {
+    display: flex;
+}
+
+.textarea-expand-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    opacity: 1;
+}
+
+.textarea-expand-btn .material-icon {
+    font-size: 14px;
+    transition: transform 0.2s ease;
+}
+
+.textarea-wrap.is-expanded .textarea-expand-btn {
+    inset: 8px 8px auto auto;
+}
+
+.textarea-wrap.is-expanded .textarea-expand-btn .material-icon {
+    transform: rotate(180deg);
 }
 
 #describe-result {

@@ -18,11 +18,10 @@ beforeEach(() => { vi.clearAllMocks(); });
 function makeUI(): UI {
     document.body.innerHTML = `
         <button id="theme-toggle"></button>
-        <textarea id="prompt"></textarea>
         <button id="generate-btn"></button>
         <button id="optimize-only-btn"></button>
         <div id="prompt-bar" class="expanded"></div>
-        <button id="prompt-toggle"></button>
+        <div id="textarea-wrap"><textarea id="prompt"></textarea><button id="textarea-expand-btn"></button></div>
 
         <div id="image-container" class="hidden">
             <img id="generated-image" />
@@ -52,29 +51,74 @@ function makeUI(): UI {
     return buildUI();
 }
 
-// ── prompt toggle ─────────────────────────────────────────────────────────────
+// ── tab expand / collapse ─────────────────────────────────────────────────────
 
-describe("prompt toggle", () => {
+describe("tab expand/collapse", () => {
     let ui: UI;
 
     beforeEach(() => {
         ui = makeUI();
-        const controller = new Controller(ui);
-        controller.bindEvents();
-        controller.init();
+        new Controller(ui).bindEvents();
     });
 
-    it("toggle button collapses the prompt bar when expanded", () => {
-        ui.promptToggle.click();
+    it("clicking the active tab when expanded collapses the prompt bar", () => {
+        ui.tabGenerate.click();
         expect(ui.promptBar.classList.contains("expanded")).toBe(false);
-        expect(ui.promptToggle.getAttribute("aria-expanded")).toBe("false");
     });
 
-    it("toggle button expands the prompt bar when collapsed", () => {
-        ui.promptToggle.click(); // collapse
-        ui.promptToggle.click(); // expand
+    it("clicking the active tab again re-expands the prompt bar", () => {
+        ui.tabGenerate.click(); // collapse
+        ui.tabGenerate.click(); // expand
         expect(ui.promptBar.classList.contains("expanded")).toBe(true);
-        expect(ui.promptToggle.getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("clicking the inactive tab when collapsed expands and switches", () => {
+        ui.tabGenerate.click(); // collapse
+        ui.tabDescribe.click(); // expand + switch
+        expect(ui.promptBar.classList.contains("expanded")).toBe(true);
+        expect(ui.describePanel.classList.contains("hidden")).toBe(false);
+        expect(ui.generatePanel.classList.contains("hidden")).toBe(true);
+    });
+
+    it("clicking the inactive tab when expanded switches without collapsing", () => {
+        ui.tabDescribe.click();
+        expect(ui.promptBar.classList.contains("expanded")).toBe(true);
+        expect(ui.tabDescribe.classList.contains("active")).toBe(true);
+    });
+});
+
+// ── textarea expand ───────────────────────────────────────────────────────────
+
+describe("textarea expand", () => {
+    let ui: UI;
+
+    beforeEach(() => {
+        ui = makeUI();
+        new Controller(ui).bindEvents();
+    });
+
+    it("expand button is hidden when content fits (no has-overflow)", () => {
+        expect(ui.textareaWrap.classList.contains("has-overflow")).toBe(false);
+    });
+
+    it("typing overflowing content adds has-overflow", () => {
+        Object.defineProperty(ui.prompt, "scrollHeight", { value: 200, configurable: true });
+        Object.defineProperty(ui.prompt, "clientHeight", { value: 100, configurable: true });
+        ui.prompt.dispatchEvent(new Event("input"));
+        expect(ui.textareaWrap.classList.contains("has-overflow")).toBe(true);
+    });
+
+    it("expand button adds is-expanded and has-overflow", () => {
+        ui.textareaWrap.classList.add("has-overflow");
+        ui.textareaExpandBtn.click();
+        expect(ui.textareaWrap.classList.contains("is-expanded")).toBe(true);
+    });
+
+    it("collapsing re-evaluates overflow and clears inline height", () => {
+        ui.textareaWrap.classList.add("is-expanded", "has-overflow");
+        ui.textareaExpandBtn.click();
+        expect(ui.textareaWrap.classList.contains("is-expanded")).toBe(false);
+        expect(ui.prompt.style.height).toBe("");
     });
 });
 

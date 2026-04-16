@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Controller, type UI } from "./controller.js";
+import { Controller } from "./controller.js";
+import { buildUI, type UI } from "./ui.js";
 
 vi.mock("./api.js", () => ({
     b64Mime:      vi.fn(() => "image/png"),
     callOptimize: vi.fn(),
     callGenerate: vi.fn(),
+    callDescribe: vi.fn(),
 }));
 
-import { callOptimize, callGenerate } from "./api.js";
+import { callOptimize, callGenerate, callDescribe } from "./api.js";
 
 beforeEach(() => { vi.clearAllMocks(); });
 
@@ -16,11 +18,10 @@ beforeEach(() => { vi.clearAllMocks(); });
 function makeUI(): UI {
     document.body.innerHTML = `
         <button id="theme-toggle"></button>
-        <textarea id="prompt"></textarea>
         <button id="generate-btn"></button>
         <button id="optimize-only-btn"></button>
         <div id="prompt-bar" class="expanded"></div>
-        <button id="prompt-toggle"></button>
+        <div id="textarea-wrap"><textarea id="prompt"></textarea><button id="textarea-expand-btn"></button></div>
 
         <div id="image-container" class="hidden">
             <img id="generated-image" />
@@ -36,53 +37,88 @@ function makeUI(): UI {
         <button id="history-toggle"></button>
         <span id="history-count"></span>
         <div id="history-list"></div>
+
+        <button id="tab-generate" class="tab active"></button>
+        <button id="tab-describe" class="tab"></button>
+        <div id="generate-panel" class="prompt-panel"></div>
+        <div id="describe-panel" class="prompt-panel hidden"></div>
+        <div id="upload-zone"><img id="upload-preview" class="hidden"></div>
+        <input type="file" id="image-upload">
+        <button id="describe-btn" disabled></button>
+        <button id="use-as-prompt-btn" class="hidden"></button>
+        <div id="describe-result" class="hidden"></div>
     `;
-    return {
-        themeToggle:     document.getElementById("theme-toggle")      as HTMLButtonElement,
-        prompt:          document.getElementById("prompt")            as HTMLTextAreaElement,
-        generateBtn:     document.getElementById("generate-btn")      as HTMLButtonElement,
-        optimizeOnlyBtn: document.getElementById("optimize-only-btn") as HTMLButtonElement,
-        promptBar:       document.getElementById("prompt-bar")        as HTMLDivElement,
-        promptToggle:    document.getElementById("prompt-toggle")     as HTMLButtonElement,
-        imageContainer:  document.getElementById("image-container")   as HTMLDivElement,
-        generatedImage:  document.getElementById("generated-image")   as HTMLImageElement,
-        loadingOverlay:  document.getElementById("loading-overlay")   as HTMLDivElement,
-        loadingMsg:      document.getElementById("loading-msg")       as HTMLSpanElement,
-        blockedMsg:      document.getElementById("blocked-msg")       as HTMLDivElement,
-        errorMsg:        document.getElementById("error-msg")         as HTMLDivElement,
-        fallbackMsg:     document.getElementById("fallback-msg")      as HTMLDivElement,
-        enhanceBtn:      document.getElementById("enhance-btn")       as HTMLButtonElement,
-        downloadBtn:     document.getElementById("download-btn")      as HTMLButtonElement,
-        historyPanel:    document.getElementById("history-panel")     as HTMLDivElement,
-        historyToggle:   document.getElementById("history-toggle")    as HTMLButtonElement,
-        historyCount:    document.getElementById("history-count")     as HTMLSpanElement,
-        historyList:     document.getElementById("history-list")      as HTMLDivElement,
-    };
+    return buildUI();
 }
 
-// ── prompt toggle ─────────────────────────────────────────────────────────────
+// ── tab expand / collapse ─────────────────────────────────────────────────────
 
-describe("prompt toggle", () => {
+describe("tab expand/collapse", () => {
     let ui: UI;
 
     beforeEach(() => {
         ui = makeUI();
-        const controller = new Controller(ui);
-        controller.bindEvents();
-        controller.init();
+        new Controller(ui).bindEvents();
     });
 
-    it("toggle button collapses the prompt bar when expanded", () => {
-        ui.promptToggle.click();
+    it("clicking the active tab when expanded collapses the prompt bar", () => {
+        ui.tabGenerate.click();
         expect(ui.promptBar.classList.contains("expanded")).toBe(false);
-        expect(ui.promptToggle.getAttribute("aria-expanded")).toBe("false");
     });
 
-    it("toggle button expands the prompt bar when collapsed", () => {
-        ui.promptToggle.click(); // collapse
-        ui.promptToggle.click(); // expand
+    it("clicking the active tab again re-expands the prompt bar", () => {
+        ui.tabGenerate.click(); // collapse
+        ui.tabGenerate.click(); // expand
         expect(ui.promptBar.classList.contains("expanded")).toBe(true);
-        expect(ui.promptToggle.getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("clicking the inactive tab when collapsed expands and switches", () => {
+        ui.tabGenerate.click(); // collapse
+        ui.tabDescribe.click(); // expand + switch
+        expect(ui.promptBar.classList.contains("expanded")).toBe(true);
+        expect(ui.describePanel.classList.contains("hidden")).toBe(false);
+        expect(ui.generatePanel.classList.contains("hidden")).toBe(true);
+    });
+
+    it("clicking the inactive tab when expanded switches without collapsing", () => {
+        ui.tabDescribe.click();
+        expect(ui.promptBar.classList.contains("expanded")).toBe(true);
+        expect(ui.tabDescribe.classList.contains("active")).toBe(true);
+    });
+});
+
+// ── textarea expand ───────────────────────────────────────────────────────────
+
+describe("textarea expand", () => {
+    let ui: UI;
+
+    beforeEach(() => {
+        ui = makeUI();
+        new Controller(ui).bindEvents();
+    });
+
+    it("expand button is hidden when content fits (no has-overflow)", () => {
+        expect(ui.textareaWrap.classList.contains("has-overflow")).toBe(false);
+    });
+
+    it("typing overflowing content adds has-overflow", () => {
+        Object.defineProperty(ui.prompt, "scrollHeight", { value: 200, configurable: true });
+        Object.defineProperty(ui.prompt, "clientHeight", { value: 100, configurable: true });
+        ui.prompt.dispatchEvent(new Event("input"));
+        expect(ui.textareaWrap.classList.contains("has-overflow")).toBe(true);
+    });
+
+    it("expand button adds is-expanded and has-overflow", () => {
+        ui.textareaWrap.classList.add("has-overflow");
+        ui.textareaExpandBtn.click();
+        expect(ui.textareaWrap.classList.contains("is-expanded")).toBe(true);
+    });
+
+    it("collapsing re-evaluates overflow and clears inline height", () => {
+        ui.textareaWrap.classList.add("is-expanded", "has-overflow");
+        ui.textareaExpandBtn.click();
+        expect(ui.textareaWrap.classList.contains("is-expanded")).toBe(false);
+        expect(ui.prompt.style.height).toBe("");
     });
 });
 
@@ -340,5 +376,107 @@ describe("fallback model notification", () => {
         ui.prompt.value = "a dog";
         ui.generateBtn.click();
         await vi.waitFor(() => expect(ui.fallbackMsg.classList.contains("hidden")).toBe(true));
+    });
+});
+
+// ── describe tab ──────────────────────────────────────────────────────────────
+
+describe("describe tab", () => {
+    let ui: UI;
+
+    beforeEach(() => {
+        ui = makeUI();
+        vi.mocked(callDescribe).mockResolvedValue("A fluffy cat on a mat.");
+        new Controller(ui).bindEvents();
+    });
+
+    it("clicking describe tab shows describe panel and hides generate panel", () => {
+        ui.tabDescribe.click();
+        expect(ui.describePanel.classList.contains("hidden")).toBe(false);
+        expect(ui.generatePanel.classList.contains("hidden")).toBe(true);
+        expect(ui.tabDescribe.classList.contains("active")).toBe(true);
+        expect(ui.tabGenerate.classList.contains("active")).toBe(false);
+    });
+
+    it("clicking generate tab restores generate panel", () => {
+        ui.tabDescribe.click();
+        ui.tabGenerate.click();
+        expect(ui.generatePanel.classList.contains("hidden")).toBe(false);
+        expect(ui.describePanel.classList.contains("hidden")).toBe(true);
+        expect(ui.tabGenerate.classList.contains("active")).toBe(true);
+    });
+
+    it("describe button is disabled initially", () => {
+        expect(ui.describeBtn.disabled).toBe(true);
+    });
+
+    it("clicking the upload zone triggers the file input", () => {
+        const clickSpy = vi.spyOn(ui.imageUpload, "click");
+        ui.uploadZone.click();
+        expect(clickSpy).toHaveBeenCalledOnce();
+    });
+
+    it("successful describe shows result and use-as-prompt button", async () => {
+        Object.defineProperty(ui.imageUpload, "files", {
+            value: [new File(["data"], "test.png", { type: "image/png" })],
+            configurable: true,
+        });
+        ui.imageUpload.dispatchEvent(new Event("change"));
+
+        await vi.waitFor(() => expect(ui.describeBtn.disabled).toBe(false));
+
+        ui.describeBtn.click();
+        await vi.waitFor(() => expect(ui.describeResult.classList.contains("hidden")).toBe(false));
+
+        expect(ui.describeResult.textContent).toBe("A fluffy cat on a mat.");
+        expect(ui.useAsPromptBtn.classList.contains("hidden")).toBe(false);
+    });
+
+    it("use as prompt fills generate textarea and switches to generate tab", async () => {
+        ui.describeResult.textContent = "A fluffy cat on a mat.";
+        ui.describeResult.classList.remove("hidden");
+        ui.tabDescribe.click();
+
+        ui.useAsPromptBtn.click();
+
+        expect(ui.prompt.value).toBe("A fluffy cat on a mat.");
+        expect(ui.generatePanel.classList.contains("hidden")).toBe(false);
+    });
+
+    it("collapses prompt bar during describe and re-expands after", async () => {
+        Object.defineProperty(ui.imageUpload, "files", {
+            value: [new File(["data"], "test.png", { type: "image/png" })],
+            configurable: true,
+        });
+        ui.imageUpload.dispatchEvent(new Event("change"));
+        await vi.waitFor(() => expect(ui.describeBtn.disabled).toBe(false));
+
+        ui.describeBtn.click();
+        expect(ui.promptBar.classList.contains("expanded")).toBe(false);
+        await vi.waitFor(() => expect(ui.promptBar.classList.contains("expanded")).toBe(true));
+    });
+
+    it("drag-over adds drag-over class and drop handles file", () => {
+        ui.uploadZone.dispatchEvent(new DragEvent("dragover", { bubbles: true }));
+        expect(ui.uploadZone.classList.contains("drag-over")).toBe(true);
+
+        ui.uploadZone.dispatchEvent(new DragEvent("dragleave", { bubbles: true }));
+        expect(ui.uploadZone.classList.contains("drag-over")).toBe(false);
+    });
+
+    it("describe error shows error message", async () => {
+        vi.mocked(callDescribe).mockRejectedValue(new Error("Vision model not found"));
+
+        Object.defineProperty(ui.imageUpload, "files", {
+            value: [new File(["data"], "test.png", { type: "image/png" })],
+            configurable: true,
+        });
+        ui.imageUpload.dispatchEvent(new Event("change"));
+
+        await vi.waitFor(() => expect(ui.describeBtn.disabled).toBe(false));
+
+        ui.describeBtn.click();
+        await vi.waitFor(() => expect(ui.errorMsg.classList.contains("hidden")).toBe(false));
+        expect(ui.errorMsg.textContent).toContain("Vision model not found");
     });
 });

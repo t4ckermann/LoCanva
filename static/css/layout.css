@@ -74,26 +74,9 @@ body:has(#loading-overlay:not(.hidden)) .logo {
     animation: spin 0.85s linear infinite;
 }
 
-.prompt-toggle {
-    display: flex;
-    align-items: center;
-    gap: var(--gap);
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    transition: color 0.15s;
-}
-
-.prompt-toggle .material-icon {
-    transition: transform 0.25s ease;
-}
-
-.prompt-bar.expanded .prompt-toggle .material-icon {
-    transform: rotate(180deg);
-}
-
-.prompt-toggle:hover:not(:disabled) {
-    color: var(--text);
+.prompt-bar-header .tab-bar {
+    flex: 1;
+    padding: 0 8px;
 }
 
 #theme-toggle {
@@ -106,14 +89,24 @@ body:has(#loading-overlay:not(.hidden)) .logo {
 
 .prompt-content {
     padding: 0 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.prompt-panel {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 10px;
+    gap: 8px;
     align-items: end;
 }
 
 .prompt-bar:not(.expanded) .prompt-content {
     display: none;
+}
+
+.textarea-wrap {
+    position: relative;
 }
 
 textarea#prompt {
@@ -128,10 +121,15 @@ textarea#prompt {
     line-height: 1.5;
     outline: none;
     min-height: 104px;
+    overflow: hidden;
 }
 
 textarea#prompt:focus {
     border-color: var(--accent);
+}
+
+.textarea-wrap.is-expanded textarea#prompt {
+    overflow-y: auto;
 }
 
 /* Mobile */
@@ -149,11 +147,16 @@ textarea#prompt:focus {
         margin-top: 66px;
     }
 
-    .prompt-content {
+    .prompt-panel {
         grid-template-columns: 1fr;
     }
 
-    textarea#prompt {
+    textarea#prompt,
+    .upload-zone {
+        min-height: 72px;
+    }
+
+    .textarea-wrap.is-expanded textarea#prompt {
         min-height: 72px;
     }
 

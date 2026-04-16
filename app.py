@@ -20,6 +20,7 @@ OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "x/z-image-turbo")
 IMAGE_MODEL_FALLBACK = os.environ.get("IMAGE_MODEL_FALLBACK", "")
 PROMPT_MODEL = os.environ.get("PROMPT_MODEL", "llama3.2")
+VISION_MODEL = os.environ.get("VISION_MODEL", "llama3.2-vision")
 
 if not IMAGE_MODEL:
     print(
@@ -48,6 +49,12 @@ TITLE_PROMPT = (
     "User: a fluffy cat in warm sunlight → fluffy-cat-sunlight\n"
     "User: mountain landscape at dusk → mountain-landscape-dusk\n"
     "User: test → test-image"
+)
+
+DESCRIBE_PROMPT = (
+    "Describe this image in detail. Focus on the visual content: "
+    "subjects, colors, composition, mood, and any notable elements. "
+    "Write in plain English. Do not start with 'This image shows' or similar preambles."
 )
 
 OPTIMIZE_PROMPT = (
@@ -127,6 +134,10 @@ class OptimizeRequest(BaseModel):
 
 class GenerateRequest(BaseModel):
     prompt: str = ""
+
+
+class DescribeRequest(BaseModel):
+    image: str = ""
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -220,6 +231,36 @@ async def generate(body: GenerateRequest):
     if fallback_model:
         result["fallback_model"] = fallback_model
     return JSONResponse(result)
+
+
+@app.post("/api/describe")
+async def describe(body: DescribeRequest):
+    if not body.image:
+        return JSONResponse({"error": "No image provided"}, status_code=400)
+
+    resp, err = await ollama_post(
+        ollama_url("/api/chat"),
+        json={
+            "model": VISION_MODEL,
+            "stream": False,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": DESCRIBE_PROMPT,
+                    "images": [body.image],
+                }
+            ],
+        },
+    )
+    if err:
+        return JSONResponse(err, status_code=502)
+
+    description = resp.json()["message"]["content"].strip()
+    if not description:
+        return JSONResponse(
+            {"error": "Model returned no description"}, status_code=502
+        )
+    return JSONResponse({"description": description})
 
 
 if __name__ == "__main__":

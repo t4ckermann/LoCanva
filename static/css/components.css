@@ -185,6 +185,136 @@ button:hover:not(:disabled) {
     opacity: 1;
 }
 
+/* Tabs */
+
+.tab-bar {
+    display: flex;
+    gap: 4px;
+}
+
+.tab {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    min-height: unset;
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.tab:hover:not(:disabled) {
+    border-color: transparent;
+    color: var(--text);
+}
+
+.tab.active {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* Upload zone */
+
+.describe-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+}
+
+.upload-zone {
+    min-height: 104px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+    border-color: var(--accent);
+}
+
+.upload-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 16px;
+    pointer-events: none;
+}
+
+.upload-hint .material-icon {
+    font-size: 24px;
+}
+
+.upload-zone:has(#upload-preview:not(.hidden)) .upload-hint {
+    display: none;
+}
+
+#upload-preview {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    display: block;
+}
+
+/* Textarea expand button */
+
+.textarea-expand-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    min-height: unset;
+    padding: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius);
+    opacity: 0.5;
+    transition: opacity 0.15s;
+}
+
+.textarea-wrap.has-overflow .textarea-expand-btn {
+    display: flex;
+}
+
+.textarea-expand-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    opacity: 1;
+}
+
+.textarea-expand-btn .material-icon {
+    font-size: 14px;
+    transition: transform 0.2s ease;
+}
+
+.textarea-wrap.is-expanded .textarea-expand-btn {
+    inset: 8px 8px auto auto;
+}
+
+.textarea-wrap.is-expanded .textarea-expand-btn .material-icon {
+    transform: rotate(180deg);
+}
+
+#describe-result {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px;
+    white-space: pre-wrap;
+}
+
 /* History navigation indicator on textarea */
 textarea#prompt.history-nav {
     border-color: var(--accent);

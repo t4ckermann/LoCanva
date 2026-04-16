@@ -271,3 +271,47 @@ class TestGenerate:
         assert resp.json()["image"] == "base64imagedata"
         assert set(os.listdir(static_dir)) == before_static
         assert set(os.listdir(tmp_dir)) == before_tmp
+
+
+# --- /api/describe ---
+
+class TestDescribe:
+    def test_missing_image_returns_400(self, client):
+        resp = client.post("/api/describe", json={})
+        assert resp.status_code == 400
+        assert "error" in resp.json()
+
+    def test_returns_description(self, client):
+        with patch("app.ollama_post", new=AsyncMock(
+            return_value=mock_chat_resp("A golden retriever running on a beach.")
+        )):
+            resp = client.post("/api/describe", json={"image": "abc123=="})
+        assert resp.status_code == 200
+        assert resp.json() == {"description": "A golden retriever running on a beach."}
+
+    def test_ollama_connection_error_returns_502(self, client):
+        with patch("app.ollama_post", new=AsyncMock(
+            return_value=err_resp("Cannot reach Ollama. Is it running?")
+        )):
+            resp = client.post("/api/describe", json={"image": "abc123=="})
+        assert resp.status_code == 502
+        assert "Ollama" in resp.json()["error"]
+
+    def test_empty_description_returns_502(self, client):
+        with patch("app.ollama_post", new=AsyncMock(return_value=mock_chat_resp(""))):
+            resp = client.post("/api/describe", json={"image": "abc123=="})
+        assert resp.status_code == 502
+        assert "description" in resp.json()["error"].lower()
+
+    def test_sends_image_to_vision_model(self, client):
+        captured = {}
+
+        async def capture_post(url, **kwargs):
+            captured["json"] = kwargs.get("json", {})
+            return mock_chat_resp("A cat.")
+
+        with patch("app.ollama_post", new=capture_post):
+            client.post("/api/describe", json={"image": "base64data=="})
+
+        msgs = captured["json"]["messages"]
+        assert msgs[0]["images"] == ["base64data=="]

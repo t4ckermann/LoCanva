@@ -1,34 +1,15 @@
 import { settings } from "./settings.js";
-import { b64Mime, callGenerate, callOptimize } from "./api.js";
+import { b64Mime, callDescribe, callGenerate, callOptimize } from "./api.js";
 import { HistoryManager, ImageEntry } from "./history.js";
-
-export interface UI {
-    themeToggle:     HTMLButtonElement;
-    prompt:          HTMLTextAreaElement;
-    generateBtn:     HTMLButtonElement;
-    optimizeOnlyBtn: HTMLButtonElement;
-    promptBar:       HTMLDivElement;
-    promptToggle:    HTMLButtonElement;
-    imageContainer:  HTMLDivElement;
-    generatedImage:  HTMLImageElement;
-    loadingOverlay:  HTMLDivElement;
-    loadingMsg:      HTMLSpanElement;
-    blockedMsg:      HTMLDivElement;
-    errorMsg:        HTMLDivElement;
-    enhanceBtn:      HTMLButtonElement;
-    fallbackMsg:     HTMLDivElement;
-    downloadBtn:     HTMLButtonElement;
-    historyPanel:    HTMLDivElement;
-    historyToggle:   HTMLButtonElement;
-    historyCount:    HTMLSpanElement;
-    historyList:     HTMLDivElement;
-}
+import { type UI } from "./ui.js";
 
 export class Controller {
     private ui: UI;
     private isRunning = false;
     private imageTitle = "generated-image";
     private history = new HistoryManager();
+    private hasImage = false;
+    private uploadedImageB64 = "";
 
     constructor(ui: UI) {
         this.ui = ui;
@@ -49,7 +30,6 @@ export class Controller {
 
     private setExpanded(expanded: boolean): void {
         this.ui.promptBar.classList.toggle("expanded", expanded);
-        this.ui.promptToggle.setAttribute("aria-expanded", String(expanded));
     }
 
     // ── Loading / messages ────────────────────────────────────────────────────
@@ -63,6 +43,7 @@ export class Controller {
         this.ui.generateBtn.disabled = disabled;
         this.ui.optimizeOnlyBtn.disabled = disabled;
         this.ui.historyToggle.disabled = disabled;
+        this.ui.describeBtn.disabled = disabled || !this.hasImage;
         this.ui.historyList.style.pointerEvents = disabled ? "none" : "";
     }
 
@@ -229,6 +210,98 @@ export class Controller {
         }
     }
 
+    // ── Describe tab ─────────────────────────────────────────────────────────
+
+    private switchTab(tab: "generate" | "describe"): void {
+        const activeBtn = tab === "generate" ? this.ui.tabGenerate : this.ui.tabDescribe;
+        if (activeBtn.classList.contains("active") && this.ui.promptBar.classList.contains("expanded")) {
+            this.setExpanded(false);
+            return;
+        }
+        const isGenerate = tab === "generate";
+        this.ui.generatePanel.classList.toggle("hidden", !isGenerate);
+        this.ui.describePanel.classList.toggle("hidden", isGenerate);
+        this.ui.tabGenerate.classList.toggle("active", isGenerate);
+        this.ui.tabDescribe.classList.toggle("active", !isGenerate);
+        this.ui.tabGenerate.setAttribute("aria-selected", String(isGenerate));
+        this.ui.tabDescribe.setAttribute("aria-selected", String(!isGenerate));
+        this.setExpanded(true);
+    }
+
+    private handleFileSelect(file: File): void {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target?.result as string;
+            this.uploadedImageB64 = dataUrl.split(",")[1] ?? "";
+            this.hasImage = Boolean(this.uploadedImageB64);
+            this.ui.uploadPreview.src = dataUrl;
+            this.ui.uploadPreview.classList.remove("hidden");
+            this.ui.describeBtn.disabled = !this.hasImage;
+            this.ui.describeResult.classList.add("hidden");
+            this.ui.useAsPromptBtn.classList.add("hidden");
+        };
+        reader.readAsDataURL(file);
+    }
+
+    private async runDescribe(): Promise<void> {
+        if (this.isRunning || !this.hasImage) return;
+
+        this.isRunning = true;
+        this.clearMessages();
+        this.setExpanded(false);
+        this.setLoading(true, "Describing image…");
+        this.setControlsDisabled(true);
+
+        try {
+            const description = await callDescribe(this.uploadedImageB64);
+            this.ui.describeResult.textContent = description;
+            this.ui.describeResult.classList.remove("hidden");
+            this.ui.useAsPromptBtn.classList.remove("hidden");
+        } catch (err) {
+            this.showError(err);
+        } finally {
+            this.isRunning = false;
+            this.setLoading(false);
+            this.setControlsDisabled(false);
+            this.setExpanded(true);
+        }
+    }
+
+    private useDescriptionAsPrompt(): void {
+        const description = this.ui.describeResult.textContent ?? "";
+        if (!description) return;
+        this.ui.prompt.value = description;
+        this.switchTab("generate");
+        this.expandTextareaIfNeeded();
+    }
+
+    // ── Textarea expand ───────────────────────────────────────────────────────
+
+    private syncExpandBtn(): void {
+        const ta = this.ui.prompt;
+        this.ui.textareaWrap.classList.toggle("has-overflow", ta.scrollHeight > ta.clientHeight);
+    }
+
+    private expandTextareaIfNeeded(): void {
+        const ta = this.ui.prompt;
+        if (ta.scrollHeight <= ta.clientHeight) return;
+        this.ui.textareaWrap.classList.add("is-expanded", "has-overflow");
+        ta.style.height = `${ta.scrollHeight}px`;
+    }
+
+    private toggleTextareaExpand(): void {
+        const wrap = this.ui.textareaWrap;
+        const ta = this.ui.prompt;
+        const expanding = !wrap.classList.contains("is-expanded");
+        wrap.classList.toggle("is-expanded", expanding);
+        if (expanding) {
+            ta.style.height = `${ta.scrollHeight}px`;
+        } else {
+            ta.style.height = "";
+            this.syncExpandBtn();
+        }
+    }
+
     // ── Download ──────────────────────────────────────────────────────────────
 
     download(): void {
@@ -240,16 +313,11 @@ export class Controller {
 
     // ── Bootstrap ─────────────────────────────────────────────────────────────
 
-    bindEvents(): void {
+    private bindGenerateEvents(): void {
         this.ui.themeToggle.addEventListener("click", () => {
             const next = settings.theme === "light" ? "dark" : "light";
             settings.theme = next;
             this.applyTheme(next);
-        });
-        this.ui.promptToggle.addEventListener("click", () => {
-            const expanding = !this.ui.promptBar.classList.contains("expanded");
-            this.setExpanded(expanding);
-            if (expanding) this.ui.prompt.focus();
         });
         this.ui.generateBtn.addEventListener("click", () => this.runGenerate());
         this.ui.optimizeOnlyBtn.addEventListener("click", () => this.runOptimize());
@@ -262,10 +330,42 @@ export class Controller {
                 this.history.resetNav();
                 this.ui.prompt.classList.remove("history-nav");
             }
+            this.syncExpandBtn();
         });
+        this.ui.textareaExpandBtn.addEventListener("click", () => this.toggleTextareaExpand());
         this.ui.enhanceBtn.addEventListener("click", () => this.enhance());
         this.ui.downloadBtn.addEventListener("click", () => this.download());
         this.ui.historyToggle.addEventListener("click", () => this.toggleHistoryPanel());
+    }
+
+    private bindDescribeEvents(): void {
+        this.ui.tabGenerate.addEventListener("click", () => this.switchTab("generate"));
+        this.ui.tabDescribe.addEventListener("click", () => this.switchTab("describe"));
+        this.ui.uploadZone.addEventListener("click", () => this.ui.imageUpload.click());
+        this.ui.uploadZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            this.ui.uploadZone.classList.add("drag-over");
+        });
+        this.ui.uploadZone.addEventListener("dragleave", () => {
+            this.ui.uploadZone.classList.remove("drag-over");
+        });
+        this.ui.uploadZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            this.ui.uploadZone.classList.remove("drag-over");
+            const file = e.dataTransfer?.files[0];
+            if (file) this.handleFileSelect(file);
+        });
+        this.ui.imageUpload.addEventListener("change", (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) this.handleFileSelect(file);
+        });
+        this.ui.describeBtn.addEventListener("click", () => this.runDescribe());
+        this.ui.useAsPromptBtn.addEventListener("click", () => this.useDescriptionAsPrompt());
+    }
+
+    bindEvents(): void {
+        this.bindGenerateEvents();
+        this.bindDescribeEvents();
     }
 
     init(): void {

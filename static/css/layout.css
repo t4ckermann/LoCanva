@@ -106,9 +106,15 @@ body:has(#loading-overlay:not(.hidden)) .logo {
 
 .prompt-content {
     padding: 0 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#generate-panel {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 10px;
+    gap: 8px;
     align-items: end;
 }
 
@@ -149,7 +155,7 @@ textarea#prompt:focus {
         margin-top: 66px;
     }
 
-    .prompt-content {
+    #generate-panel {
         grid-template-columns: 1fr;
     }
 

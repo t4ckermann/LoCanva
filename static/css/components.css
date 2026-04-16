@@ -185,6 +185,63 @@ button:hover:not(:disabled) {
     opacity: 1;
 }
 
+/* Tabs */
+
+.tab-bar {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+}
+
+.tab {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    min-height: unset;
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.tab:hover:not(:disabled) {
+    border-color: transparent;
+    color: var(--text);
+}
+
+.tab.active {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* Upload area */
+
+.upload-area {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+    align-items: flex-start;
+}
+
+#upload-preview {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+}
+
+#describe-result {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px;
+    white-space: pre-wrap;
+}
+
 /* History navigation indicator on textarea */
 textarea#prompt.history-nav {
     border-color: var(--accent);

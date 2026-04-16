@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { b64Mime, callGenerate, callOptimize } from "./api.js";
+import { b64Mime, callDescribe, callGenerate, callOptimize } from "./api.js";
 
 // ── fetch mock ────────────────────────────────────────────────────────────────
 const mockFetch = vi.fn();
@@ -77,11 +77,40 @@ describe("callGenerate", () => {
         await expect(callGenerate("a cat")).rejects.toThrow("Model not found");
     });
 
+    it("includes fallback_model when present", async () => {
+        mockFetch.mockReturnValue(jsonResponse({ image: "x", title: "t", fallback_model: "other" }));
+        const result = await callGenerate("a cat");
+        expect(result.fallback_model).toBe("other");
+    });
+
     it("sends prompt in request body", async () => {
         mockFetch.mockReturnValue(jsonResponse({ image: "x", title: "t" }));
         await callGenerate("a red barn");
         expect(mockFetch).toHaveBeenCalledWith("/api/generate", expect.objectContaining({
             body: JSON.stringify({ prompt: "a red barn" }),
+        }));
+    });
+});
+
+// ── callDescribe ──────────────────────────────────────────────────────────────
+describe("callDescribe", () => {
+    beforeEach(() => mockFetch.mockReset());
+
+    it("returns description string", async () => {
+        mockFetch.mockReturnValue(jsonResponse({ description: "A fluffy cat on a mat." }));
+        await expect(callDescribe("abc123==")).resolves.toBe("A fluffy cat on a mat.");
+    });
+
+    it("throws on server error", async () => {
+        mockFetch.mockReturnValue(jsonResponse({ error: "Model not found" }));
+        await expect(callDescribe("abc123==")).rejects.toThrow("Model not found");
+    });
+
+    it("sends image in request body", async () => {
+        mockFetch.mockReturnValue(jsonResponse({ description: "A cat." }));
+        await callDescribe("base64data==");
+        expect(mockFetch).toHaveBeenCalledWith("/api/describe", expect.objectContaining({
+            body: JSON.stringify({ image: "base64data==" }),
         }));
     });
 });

@@ -1,5 +1,5 @@
 import { settings } from "./settings.js";
-import { b64Mime, callGenerate, callOptimize } from "./api.js";
+import { b64Mime, callDescribe, callGenerate, callOptimize } from "./api.js";
 import { HistoryManager, ImageEntry } from "./history.js";
 
 export interface UI {
@@ -22,6 +22,16 @@ export interface UI {
     historyToggle:   HTMLButtonElement;
     historyCount:    HTMLSpanElement;
     historyList:     HTMLDivElement;
+    tabGenerate:     HTMLButtonElement;
+    tabDescribe:     HTMLButtonElement;
+    generatePanel:   HTMLDivElement;
+    describePanel:   HTMLDivElement;
+    imageUpload:     HTMLInputElement;
+    uploadTriggerBtn: HTMLButtonElement;
+    uploadPreview:   HTMLImageElement;
+    describeBtn:     HTMLButtonElement;
+    useAsPromptBtn:  HTMLButtonElement;
+    describeResult:  HTMLDivElement;
 }
 
 export class Controller {
@@ -29,6 +39,8 @@ export class Controller {
     private isRunning = false;
     private imageTitle = "generated-image";
     private history = new HistoryManager();
+    private hasImage = false;
+    private uploadedImageB64 = "";
 
     constructor(ui: UI) {
         this.ui = ui;
@@ -63,6 +75,7 @@ export class Controller {
         this.ui.generateBtn.disabled = disabled;
         this.ui.optimizeOnlyBtn.disabled = disabled;
         this.ui.historyToggle.disabled = disabled;
+        this.ui.describeBtn.disabled = disabled || !this.hasImage;
         this.ui.historyList.style.pointerEvents = disabled ? "none" : "";
     }
 
@@ -229,6 +242,63 @@ export class Controller {
         }
     }
 
+    // ── Describe tab ─────────────────────────────────────────────────────────
+
+    private switchTab(tab: "generate" | "describe"): void {
+        const isGenerate = tab === "generate";
+        this.ui.generatePanel.classList.toggle("hidden", !isGenerate);
+        this.ui.describePanel.classList.toggle("hidden", isGenerate);
+        this.ui.tabGenerate.classList.toggle("active", isGenerate);
+        this.ui.tabDescribe.classList.toggle("active", !isGenerate);
+        this.ui.tabGenerate.setAttribute("aria-selected", String(isGenerate));
+        this.ui.tabDescribe.setAttribute("aria-selected", String(!isGenerate));
+        this.setExpanded(true);
+    }
+
+    private handleFileSelect(file: File): void {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target?.result as string;
+            this.uploadedImageB64 = dataUrl.split(",")[1] ?? "";
+            this.hasImage = Boolean(this.uploadedImageB64);
+            this.ui.uploadPreview.src = dataUrl;
+            this.ui.uploadPreview.classList.remove("hidden");
+            this.ui.describeBtn.disabled = !this.hasImage;
+            this.ui.describeResult.classList.add("hidden");
+            this.ui.useAsPromptBtn.classList.add("hidden");
+        };
+        reader.readAsDataURL(file);
+    }
+
+    private async runDescribe(): Promise<void> {
+        if (this.isRunning || !this.hasImage) return;
+
+        this.isRunning = true;
+        this.clearMessages();
+        this.setLoading(true, "Describing image…");
+        this.setControlsDisabled(true);
+
+        try {
+            const description = await callDescribe(this.uploadedImageB64);
+            this.ui.describeResult.textContent = description;
+            this.ui.describeResult.classList.remove("hidden");
+            this.ui.useAsPromptBtn.classList.remove("hidden");
+        } catch (err) {
+            this.showError(err);
+        } finally {
+            this.isRunning = false;
+            this.setLoading(false);
+            this.setControlsDisabled(false);
+        }
+    }
+
+    private useDescriptionAsPrompt(): void {
+        const description = this.ui.describeResult.textContent ?? "";
+        if (!description) return;
+        this.ui.prompt.value = description;
+        this.switchTab("generate");
+    }
+
     // ── Download ──────────────────────────────────────────────────────────────
 
     download(): void {
@@ -240,7 +310,7 @@ export class Controller {
 
     // ── Bootstrap ─────────────────────────────────────────────────────────────
 
-    bindEvents(): void {
+    private bindGenerateEvents(): void {
         this.ui.themeToggle.addEventListener("click", () => {
             const next = settings.theme === "light" ? "dark" : "light";
             settings.theme = next;
@@ -266,6 +336,23 @@ export class Controller {
         this.ui.enhanceBtn.addEventListener("click", () => this.enhance());
         this.ui.downloadBtn.addEventListener("click", () => this.download());
         this.ui.historyToggle.addEventListener("click", () => this.toggleHistoryPanel());
+    }
+
+    private bindDescribeEvents(): void {
+        this.ui.tabGenerate.addEventListener("click", () => this.switchTab("generate"));
+        this.ui.tabDescribe.addEventListener("click", () => this.switchTab("describe"));
+        this.ui.uploadTriggerBtn.addEventListener("click", () => this.ui.imageUpload.click());
+        this.ui.imageUpload.addEventListener("change", (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) this.handleFileSelect(file);
+        });
+        this.ui.describeBtn.addEventListener("click", () => this.runDescribe());
+        this.ui.useAsPromptBtn.addEventListener("click", () => this.useDescriptionAsPrompt());
+    }
+
+    bindEvents(): void {
+        this.bindGenerateEvents();
+        this.bindDescribeEvents();
     }
 
     init(): void {

@@ -5,9 +5,10 @@ vi.mock("./api.js", () => ({
     b64Mime:      vi.fn(() => "image/png"),
     callOptimize: vi.fn(),
     callGenerate: vi.fn(),
+    callDescribe: vi.fn(),
 }));
 
-import { callOptimize, callGenerate } from "./api.js";
+import { callOptimize, callGenerate, callDescribe } from "./api.js";
 
 beforeEach(() => { vi.clearAllMocks(); });
 
@@ -36,27 +37,48 @@ function makeUI(): UI {
         <button id="history-toggle"></button>
         <span id="history-count"></span>
         <div id="history-list"></div>
+
+        <button id="tab-generate" class="tab active"></button>
+        <button id="tab-describe" class="tab"></button>
+        <div id="generate-panel"></div>
+        <div id="describe-panel" class="hidden"></div>
+        <input type="file" id="image-upload">
+        <button id="upload-trigger-btn"></button>
+        <img id="upload-preview" class="hidden">
+        <button id="describe-btn" disabled></button>
+        <button id="use-as-prompt-btn" class="hidden"></button>
+        <div id="describe-result" class="hidden"></div>
     `;
     return {
-        themeToggle:     document.getElementById("theme-toggle")      as HTMLButtonElement,
-        prompt:          document.getElementById("prompt")            as HTMLTextAreaElement,
-        generateBtn:     document.getElementById("generate-btn")      as HTMLButtonElement,
-        optimizeOnlyBtn: document.getElementById("optimize-only-btn") as HTMLButtonElement,
-        promptBar:       document.getElementById("prompt-bar")        as HTMLDivElement,
-        promptToggle:    document.getElementById("prompt-toggle")     as HTMLButtonElement,
-        imageContainer:  document.getElementById("image-container")   as HTMLDivElement,
-        generatedImage:  document.getElementById("generated-image")   as HTMLImageElement,
-        loadingOverlay:  document.getElementById("loading-overlay")   as HTMLDivElement,
-        loadingMsg:      document.getElementById("loading-msg")       as HTMLSpanElement,
-        blockedMsg:      document.getElementById("blocked-msg")       as HTMLDivElement,
-        errorMsg:        document.getElementById("error-msg")         as HTMLDivElement,
-        fallbackMsg:     document.getElementById("fallback-msg")      as HTMLDivElement,
-        enhanceBtn:      document.getElementById("enhance-btn")       as HTMLButtonElement,
-        downloadBtn:     document.getElementById("download-btn")      as HTMLButtonElement,
-        historyPanel:    document.getElementById("history-panel")     as HTMLDivElement,
-        historyToggle:   document.getElementById("history-toggle")    as HTMLButtonElement,
-        historyCount:    document.getElementById("history-count")     as HTMLSpanElement,
-        historyList:     document.getElementById("history-list")      as HTMLDivElement,
+        themeToggle:     document.getElementById("theme-toggle")       as HTMLButtonElement,
+        prompt:          document.getElementById("prompt")             as HTMLTextAreaElement,
+        generateBtn:     document.getElementById("generate-btn")       as HTMLButtonElement,
+        optimizeOnlyBtn: document.getElementById("optimize-only-btn")  as HTMLButtonElement,
+        promptBar:       document.getElementById("prompt-bar")         as HTMLDivElement,
+        promptToggle:    document.getElementById("prompt-toggle")      as HTMLButtonElement,
+        imageContainer:  document.getElementById("image-container")    as HTMLDivElement,
+        generatedImage:  document.getElementById("generated-image")    as HTMLImageElement,
+        loadingOverlay:  document.getElementById("loading-overlay")    as HTMLDivElement,
+        loadingMsg:      document.getElementById("loading-msg")        as HTMLSpanElement,
+        blockedMsg:      document.getElementById("blocked-msg")        as HTMLDivElement,
+        errorMsg:        document.getElementById("error-msg")          as HTMLDivElement,
+        fallbackMsg:     document.getElementById("fallback-msg")       as HTMLDivElement,
+        enhanceBtn:      document.getElementById("enhance-btn")        as HTMLButtonElement,
+        downloadBtn:     document.getElementById("download-btn")       as HTMLButtonElement,
+        historyPanel:    document.getElementById("history-panel")      as HTMLDivElement,
+        historyToggle:   document.getElementById("history-toggle")     as HTMLButtonElement,
+        historyCount:    document.getElementById("history-count")      as HTMLSpanElement,
+        historyList:     document.getElementById("history-list")       as HTMLDivElement,
+        tabGenerate:     document.getElementById("tab-generate")       as HTMLButtonElement,
+        tabDescribe:     document.getElementById("tab-describe")       as HTMLButtonElement,
+        generatePanel:   document.getElementById("generate-panel")     as HTMLDivElement,
+        describePanel:   document.getElementById("describe-panel")     as HTMLDivElement,
+        imageUpload:     document.getElementById("image-upload")       as HTMLInputElement,
+        uploadTriggerBtn: document.getElementById("upload-trigger-btn") as HTMLButtonElement,
+        uploadPreview:   document.getElementById("upload-preview")     as HTMLImageElement,
+        describeBtn:     document.getElementById("describe-btn")       as HTMLButtonElement,
+        useAsPromptBtn:  document.getElementById("use-as-prompt-btn")  as HTMLButtonElement,
+        describeResult:  document.getElementById("describe-result")    as HTMLDivElement,
     };
 }
 
@@ -340,5 +362,86 @@ describe("fallback model notification", () => {
         ui.prompt.value = "a dog";
         ui.generateBtn.click();
         await vi.waitFor(() => expect(ui.fallbackMsg.classList.contains("hidden")).toBe(true));
+    });
+});
+
+// ── describe tab ──────────────────────────────────────────────────────────────
+
+describe("describe tab", () => {
+    let ui: UI;
+
+    beforeEach(() => {
+        ui = makeUI();
+        vi.mocked(callDescribe).mockResolvedValue("A fluffy cat on a mat.");
+        new Controller(ui).bindEvents();
+    });
+
+    it("clicking describe tab shows describe panel and hides generate panel", () => {
+        ui.tabDescribe.click();
+        expect(ui.describePanel.classList.contains("hidden")).toBe(false);
+        expect(ui.generatePanel.classList.contains("hidden")).toBe(true);
+        expect(ui.tabDescribe.classList.contains("active")).toBe(true);
+        expect(ui.tabGenerate.classList.contains("active")).toBe(false);
+    });
+
+    it("clicking generate tab restores generate panel", () => {
+        ui.tabDescribe.click();
+        ui.tabGenerate.click();
+        expect(ui.generatePanel.classList.contains("hidden")).toBe(false);
+        expect(ui.describePanel.classList.contains("hidden")).toBe(true);
+        expect(ui.tabGenerate.classList.contains("active")).toBe(true);
+    });
+
+    it("describe button is disabled initially", () => {
+        expect(ui.describeBtn.disabled).toBe(true);
+    });
+
+    it("upload trigger button clicks the file input", () => {
+        const clickSpy = vi.spyOn(ui.imageUpload, "click");
+        ui.uploadTriggerBtn.click();
+        expect(clickSpy).toHaveBeenCalledOnce();
+    });
+
+    it("successful describe shows result and use-as-prompt button", async () => {
+        Object.defineProperty(ui.imageUpload, "files", {
+            value: [new File(["data"], "test.png", { type: "image/png" })],
+            configurable: true,
+        });
+        ui.imageUpload.dispatchEvent(new Event("change"));
+
+        await vi.waitFor(() => expect(ui.describeBtn.disabled).toBe(false));
+
+        ui.describeBtn.click();
+        await vi.waitFor(() => expect(ui.describeResult.classList.contains("hidden")).toBe(false));
+
+        expect(ui.describeResult.textContent).toBe("A fluffy cat on a mat.");
+        expect(ui.useAsPromptBtn.classList.contains("hidden")).toBe(false);
+    });
+
+    it("use as prompt fills generate textarea and switches to generate tab", async () => {
+        ui.describeResult.textContent = "A fluffy cat on a mat.";
+        ui.describeResult.classList.remove("hidden");
+        ui.tabDescribe.click();
+
+        ui.useAsPromptBtn.click();
+
+        expect(ui.prompt.value).toBe("A fluffy cat on a mat.");
+        expect(ui.generatePanel.classList.contains("hidden")).toBe(false);
+    });
+
+    it("describe error shows error message", async () => {
+        vi.mocked(callDescribe).mockRejectedValue(new Error("Vision model not found"));
+
+        Object.defineProperty(ui.imageUpload, "files", {
+            value: [new File(["data"], "test.png", { type: "image/png" })],
+            configurable: true,
+        });
+        ui.imageUpload.dispatchEvent(new Event("change"));
+
+        await vi.waitFor(() => expect(ui.describeBtn.disabled).toBe(false));
+
+        ui.describeBtn.click();
+        await vi.waitFor(() => expect(ui.errorMsg.classList.contains("hidden")).toBe(false));
+        expect(ui.errorMsg.textContent).toContain("Vision model not found");
     });
 });

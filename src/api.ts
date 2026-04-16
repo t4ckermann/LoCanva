@@ -31,6 +31,17 @@ export async function callGenerate(
     };
 }
 
+export async function callDescribe(imageB64: string): Promise<string> {
+    const resp = await fetch("/api/describe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageB64 }),
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    return data.description as string;
+}
+
 export function b64Mime(b64: string): string {
     if (b64.startsWith("/9j/"))   return "image/jpeg";
     if (b64.startsWith("R0lGOD")) return "image/gif";

@@ -1,38 +1,7 @@
 import { settings } from "./settings.js";
 import { b64Mime, callDescribe, callGenerate, callOptimize } from "./api.js";
 import { HistoryManager, ImageEntry } from "./history.js";
-
-export interface UI {
-    themeToggle:     HTMLButtonElement;
-    prompt:          HTMLTextAreaElement;
-    generateBtn:     HTMLButtonElement;
-    optimizeOnlyBtn: HTMLButtonElement;
-    promptBar:       HTMLDivElement;
-    promptToggle:    HTMLButtonElement;
-    imageContainer:  HTMLDivElement;
-    generatedImage:  HTMLImageElement;
-    loadingOverlay:  HTMLDivElement;
-    loadingMsg:      HTMLSpanElement;
-    blockedMsg:      HTMLDivElement;
-    errorMsg:        HTMLDivElement;
-    enhanceBtn:      HTMLButtonElement;
-    fallbackMsg:     HTMLDivElement;
-    downloadBtn:     HTMLButtonElement;
-    historyPanel:    HTMLDivElement;
-    historyToggle:   HTMLButtonElement;
-    historyCount:    HTMLSpanElement;
-    historyList:     HTMLDivElement;
-    tabGenerate:     HTMLButtonElement;
-    tabDescribe:     HTMLButtonElement;
-    generatePanel:   HTMLDivElement;
-    describePanel:   HTMLDivElement;
-    imageUpload:     HTMLInputElement;
-    uploadTriggerBtn: HTMLButtonElement;
-    uploadPreview:   HTMLImageElement;
-    describeBtn:     HTMLButtonElement;
-    useAsPromptBtn:  HTMLButtonElement;
-    describeResult:  HTMLDivElement;
-}
+import { type UI } from "./ui.js";
 
 export class Controller {
     private ui: UI;

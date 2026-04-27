@@ -2,6 +2,10 @@ function q<T extends HTMLElement>(id: string): T {
     return document.getElementById(id) as T;
 }
 
+function maybe<T extends HTMLElement>(id: string): T | null {
+    return document.getElementById(id) as T | null;
+}
+
 function generateUI() {
     return {
         themeToggle:     q<HTMLButtonElement>  ("theme-toggle"),
@@ -15,11 +19,16 @@ function generateUI() {
         generatedImage:  q<HTMLImageElement>   ("generated-image"),
         loadingOverlay:  q<HTMLDivElement>     ("loading-overlay"),
         loadingMsg:      q<HTMLSpanElement>    ("loading-msg"),
-        blockedMsg:      q<HTMLDivElement>     ("blocked-msg"),
         errorMsg:        q<HTMLDivElement>     ("error-msg"),
         enhanceBtn:      q<HTMLButtonElement>  ("enhance-btn"),
         fallbackMsg:     q<HTMLDivElement>     ("fallback-msg"),
         downloadBtn:     q<HTMLButtonElement>  ("download-btn"),
+        driveUploadBtn:  q<HTMLButtonElement>  ("drive-upload-btn"),
+        googleConnect:   maybe<HTMLAnchorElement>("google-connect"),
+        googleDriveOk:   maybe<HTMLSpanElement> ("google-drive-ok"),
+        aspectLand:        q<HTMLInputElement>   ("aspect-landscape"),
+        aspectPort:        q<HTMLInputElement>   ("aspect-portrait"),
+        aspectSquare:      q<HTMLInputElement>   ("aspect-square"),
     };
 }
 

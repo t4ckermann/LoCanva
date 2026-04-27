@@ -41,3 +41,6 @@ static/js/*.map
 # Environment variables
 .env
 .env.local
+
+# Google Drive OAuth (refresh token — do not commit)
+.google_token.json

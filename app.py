@@ -1,16 +1,29 @@
+import base64
 import os
-import random
 import re
+import secrets
+from typing import Literal
 
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 load_dotenv()
+
+from google_drive import (  # noqa: E402
+    app_base,
+    build_authorize_url,
+    exchange_code_for_tokens,
+    get_access_token,
+    has_refresh_token,
+    oauth_configured,
+    save_oauth_tokens,
+    upload_image_b64,
+)
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -21,25 +34,11 @@ IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "x/z-image-turbo")
 IMAGE_MODEL_FALLBACK = os.environ.get("IMAGE_MODEL_FALLBACK", "")
 PROMPT_MODEL = os.environ.get("PROMPT_MODEL", "llama3.2")
 VISION_MODEL = os.environ.get("VISION_MODEL", "llama3.2-vision")
-
 if not IMAGE_MODEL:
     print(
         "WARNING: IMAGE_MODEL is not set. "
         "Add it to your .env file as described in the README."
     )
-
-SAFETY_ONLY_PROMPT = (
-    "You are a safety checker for an AI image generation tool. "
-    "Your only valid responses are the single word SAFE or the single "
-    "word BLOCKED — nothing else, no punctuation, no explanation.\n\n"
-    "Respond with BLOCKED only if the prompt explicitly requests "
-    "pornographic or sexual content, nudity, or deepfakes. "
-    "Respond with SAFE for everything else.\n\n"
-    "Examples:\n"
-    "User: a cat → SAFE\n"
-    "User: naked people → BLOCKED\n"
-    "User: test → SAFE"
-)
 
 TITLE_PROMPT = (
     "You are a filename generator for AI-generated images. "
@@ -59,16 +58,11 @@ DESCRIBE_PROMPT = (
 
 OPTIMIZE_PROMPT = (
     "You are a prompt optimizer for an AI image generation tool. "
-    "Your only valid responses are the single word BLOCKED or an "
-    "improved image generation prompt — no explanations, no 'I', "
-    "no meta-commentary, no preamble.\n\n"
-    "Respond with BLOCKED only if the prompt explicitly requests "
-    "pornographic or sexual content, nudity, or deepfakes. "
-    "For ALL other prompts, respond with only the improved prompt.\n\n"
+    "Respond with only the improved image generation prompt — no explanations, no 'I', "
+    "no meta-commentary, no preamble, no refusals.\n\n"
     "Examples:\n"
     "User: cat → A fluffy tabby cat in warm afternoon sunlight, "
     "detailed fur, shallow depth of field\n"
-    "User: naked people → BLOCKED\n"
     "User: test → A technical test pattern with geometric shapes "
     "and vibrant primary colors on a white background"
 )
@@ -84,32 +78,54 @@ def ollama_url(path):
     return f"{OLLAMA_BASE_URL.rstrip('/')}{path}"
 
 
-_BLOCK_MESSAGES = [
-    "This is LoCanva, not PornCanva. Try a sunset instead.",
-    "Absolutely not. Your GPU deserves better.",
-    "Nice try. Go touch some grass.",
-    "Not today. Not ever. Respect boundaries, even digital ones.",
-    "The model said no. So did I.",
-    "Bro. No. Just no.",
-    "I was built for art, not objectification. Elevate your game.",
-]
+# Ollama image /api/generate: width & height (model-dependent; common diffusion sizes)
+ASPECT_SIZE: dict[str, tuple[int, int]] = {
+    "square": (1024, 1024),
+    "landscape": (1344, 768),
+    "portrait": (768, 1344),
+}
 
 
-def _is_refusal(text: str) -> bool:
-    return text.strip().upper() == "BLOCKED"
+def _ollama_image_error_hint(err: dict) -> dict:
+    """Clarify that refusal strings come from the user's Ollama model, not LoCanva."""
+    msg = err.get("error")
+    if not isinstance(msg, str):
+        return err
+    low = msg.lower()
+    needles = (
+        "fulfill", "can't", "cannot", "unable to", "refus", "not allowed",
+        "inappropriate", "safety", "policy",
+    )
+    if any(n in low for n in needles):
+        return {
+            "error": (
+                f"{msg} — This message is from your Ollama image model, not from LoCanva. "
+                "Try rephrasing the prompt, set IMAGE_MODEL to another model in .env, "
+                "or update Ollama / the model."
+            ),
+        }
+    return err
 
 
-async def _try_generate_image(model: str, prompt: str):
+async def _try_generate_image(
+    model: str, prompt: str, width: int, height: int,
+):
     """Attempt image generation with a single model; returns (body, err)."""
     resp, err = await ollama_post(
         ollama_url("/api/generate"),
-        json={"model": model, "prompt": prompt, "stream": False},
+        json={
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "width": width,
+            "height": height,
+        },
     )
     if err:
         return None, err
     body = resp.json()
     if body.get("error"):
-        return None, {"error": body["error"]}
+        return None, _ollama_image_error_hint({"error": body["error"]})
     return body, None
 
 
@@ -134,15 +150,110 @@ class OptimizeRequest(BaseModel):
 
 class GenerateRequest(BaseModel):
     prompt: str = ""
+    aspect: Literal["square", "landscape", "portrait"] = "square"
 
 
 class DescribeRequest(BaseModel):
     image: str = ""
 
 
+class DriveUploadRequest(BaseModel):
+    image: str = ""
+    title: str = "generated-image"
+
+
+def _b64_from_payload(s: str) -> str:
+    t = s.strip()
+    if "," in t and t.lower().startswith("data:"):
+        t = t.split(",", 1)[1]
+    try:
+        base64.b64decode(t, validate=True)
+    except (ValueError, TypeError):
+        return ""
+    return t
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse(request, "index.html")
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {"google_drive": oauth_configured()},
+    )
+
+
+@app.get("/api/drive/status")
+async def drive_status():
+    if not oauth_configured():
+        return JSONResponse({"configured": False, "connected": False})
+    return JSONResponse({"configured": True, "connected": has_refresh_token()})
+
+
+@app.get("/api/auth/google")
+async def google_oauth_start():
+    if not oauth_configured():
+        return JSONResponse(
+            {"error": "Google Drive is not configured"},
+            status_code=400,
+        )
+    state = secrets.token_urlsafe(32)
+    r = RedirectResponse(build_authorize_url(state))
+    r.set_cookie("oauth_state", state, max_age=600, httponly=True, samesite="lax")
+    return r
+
+
+async def _oauth_callback_handler(
+    request: Request, state: str, code: str | None, error: str | None,
+) -> RedirectResponse:
+    loc = f"{app_base()}/"
+    if error or not oauth_configured():
+        return RedirectResponse(f"{loc}?drive=error")
+    cookie = request.cookies.get("oauth_state")
+    if not cookie or cookie != state or not code:
+        return RedirectResponse(f"{loc}?drive=error")
+    try:
+        tokens = await exchange_code_for_tokens(code)
+        save_oauth_tokens(tokens)
+    except (httpx.HTTPError, ValueError, OSError, KeyError):
+        return RedirectResponse(f"{loc}?drive=error")
+    r = RedirectResponse(f"{loc}?drive=1")
+    r.delete_cookie("oauth_state")
+    return r
+
+
+@app.get("/api/auth/google/callback")
+async def google_oauth_callback(
+    request: Request,
+    state: str = "",
+    code: str | None = None,
+    error: str | None = None,
+):
+    return await _oauth_callback_handler(request, state, code, error)
+
+
+async def _drive_upload_handler(body: DriveUploadRequest) -> JSONResponse:
+    if not oauth_configured():
+        return JSONResponse(
+            {"error": "Google Drive is not configured"},
+            status_code=400,
+        )
+    if not has_refresh_token():
+        return JSONResponse({"error": "Connect Google Drive first"}, status_code=401)
+    b64 = _b64_from_payload(body.image)
+    if not b64:
+        return JSONResponse({"error": "Invalid or empty image"}, status_code=400)
+    title = body.title.strip() or "generated-image"
+    try:
+        access = await get_access_token()
+        file_id = await upload_image_b64(access, title, b64)
+    except (httpx.HTTPError, ValueError, OSError, RuntimeError) as ex:
+        return JSONResponse({"error": str(ex)}, status_code=502)
+    return JSONResponse({"id": file_id})
+
+
+@app.post("/api/drive/upload")
+async def drive_upload(body: DriveUploadRequest):
+    return await _drive_upload_handler(body)
 
 
 @app.post("/api/optimize")
@@ -151,31 +262,22 @@ async def optimize(body: OptimizeRequest):
     do_optimize = body.optimize
     if not prompt:
         return JSONResponse({"error": "No prompt provided"}, status_code=400)
-
-    system = OPTIMIZE_PROMPT if do_optimize else SAFETY_ONLY_PROMPT
+    if not do_optimize:
+        return JSONResponse({"optimized": None})
     resp, err = await ollama_post(
         ollama_url("/api/chat"),
         json={
             "model": PROMPT_MODEL,
             "stream": False,
             "messages": [
-                {"role": "system", "content": system},
+                {"role": "system", "content": OPTIMIZE_PROMPT},
                 {"role": "user", "content": prompt},
             ],
         },
     )
     if err:
         return JSONResponse(err, status_code=502)
-
     content = resp.json()["message"]["content"].strip()
-
-    if _is_refusal(content):
-        return JSONResponse({
-            "blocked": True,
-            "message": random.choice(_BLOCK_MESSAGES),
-        })
-    if not do_optimize:
-        return JSONResponse({"optimized": None})
     return JSONResponse({"optimized": content})
 
 
@@ -208,11 +310,14 @@ async def generate(body: GenerateRequest):
     if not title_err:
         title = _slugify(title_resp.json()["message"]["content"])
 
-    body_data, err = await _try_generate_image(IMAGE_MODEL, prompt)
+    w, h = ASPECT_SIZE[body.aspect]
+    body_data, err = await _try_generate_image(IMAGE_MODEL, prompt, w, h)
     fallback_model = None
     if err and IMAGE_MODEL_FALLBACK:
         fallback_model = IMAGE_MODEL_FALLBACK
-        body_data, err = await _try_generate_image(IMAGE_MODEL_FALLBACK, prompt)
+        body_data, err = await _try_generate_image(
+            IMAGE_MODEL_FALLBACK, prompt, w, h,
+        )
     if err:
         return JSONResponse(err, status_code=502)
 

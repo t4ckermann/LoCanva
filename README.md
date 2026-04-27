@@ -84,7 +84,15 @@ The server starts at `http://127.0.0.1:1337` by default.
 | `OLLAMA_BASE_URL` | `http://localhost:11434`  | Ollama API base URL                      |
 | `IMAGE_MODEL`          | `x/z-image-turbo`        | Ollama model used for image generation   |
 | `IMAGE_MODEL_FALLBACK` | `""` (disabled)          | Fallback image model tried automatically if `IMAGE_MODEL` fails |
-| `PROMPT_MODEL`         | `llama3.2`               | Ollama model used for prompt optimization and safety filtering |
+| `PROMPT_MODEL`         | `llama3.2`               | Ollama model used for prompt optimization |
+| `GOOGLE_OAUTH_CLIENT_ID` | `""` (disabled)      | [OAuth 2.0 “Web” client](https://console.cloud.google.com/apis/credentials) (Client ID) |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | `""` (disabled)  | Same client’s **Client secret** (server-side; never commit `.env`) |
+| `GOOGLE_TOKEN_PATH`    | (see text)            | File path for the stored refresh token (default: `<project>/.google_token.json`, gitignored) |
+| `PUBLIC_BASE_URL`      | `http://127.0.0.1:1337` | **Authorized redirect URI** in Google Cloud must be `{PUBLIC_BASE_URL}/api/auth/google/callback` |
+| `GOOGLE_DRIVE_FOLDER_PATH` | `""` (My Drive root) | Target folder as path under “My Drive”, e.g. `bal/new` (creates `bal` → `new` if missing). Ignored if `GOOGLE_DRIVE_FOLDER_ID` is set. |
+| `GOOGLE_DRIVE_FOLDER_ID`   | `""` (disabled)      | Optional. Paste a folder’s ID from its Drive URL (`.../folders/THIS_ID`) to upload there instead of using `GOOGLE_DRIVE_FOLDER_PATH`. |
+
+**Google Drive (optional):** Enable the **Google Drive API** in the same project. In the OAuth client, add the redirect URI from the table. Use **Connect Google Drive** in the footer once; after that, uploads go through the server without another Google sign-in in the app (the refresh token is stored in `GOOGLE_TOKEN_PATH`).
 
 ## Network access
 

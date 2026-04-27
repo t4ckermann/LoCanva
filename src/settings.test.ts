@@ -24,4 +24,24 @@ describe("settings", () => {
         settings.theme = "dark";
         expect(settings.theme).toBe("dark");
     });
+
+    it("returns square by default for aspect", () => {
+        expect(settings.aspect).toBe("square");
+    });
+
+    it("returns stored aspect", () => {
+        localStorage.setItem("aspect", "landscape");
+        expect(settings.aspect).toBe("landscape");
+    });
+
+    it("persists aspect when set", () => {
+        settings.aspect = "portrait";
+        expect(localStorage.getItem("aspect")).toBe("portrait");
+        expect(settings.aspect).toBe("portrait");
+    });
+
+    it("treats invalid aspect as square", () => {
+        localStorage.setItem("aspect", "wide");
+        expect(settings.aspect).toBe("square");
+    });
 });

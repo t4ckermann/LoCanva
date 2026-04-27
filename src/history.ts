@@ -1,3 +1,5 @@
+import type { AspectFormat } from "./settings.js";
+
 const DB_NAME = "locanva";
 const DB_VERSION = 1;
 const STORE_NAME = "data";
@@ -8,6 +10,8 @@ export interface ImageEntry {
     prompt: string;
     src: string;
     title: string;
+    /** Output shape for this generation (older entries may omit). */
+    aspect?: AspectFormat;
 }
 
 function openDB(): Promise<IDBDatabase> {

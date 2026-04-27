@@ -1,5 +1,12 @@
-import { settings } from "./settings.js";
-import { b64Mime, callDescribe, callGenerate, callOptimize } from "./api.js";
+import { type AspectFormat, settings } from "./settings.js";
+import {
+    b64Mime,
+    callDescribe,
+    callDriveStatus,
+    callDriveUpload,
+    callGenerate,
+    callOptimize,
+} from "./api.js";
 import { HistoryManager, ImageEntry } from "./history.js";
 import { type UI } from "./ui.js";
 
@@ -45,20 +52,22 @@ export class Controller {
         this.ui.historyToggle.disabled = disabled;
         this.ui.describeBtn.disabled = disabled || !this.hasImage;
         this.ui.historyList.style.pointerEvents = disabled ? "none" : "";
+        this.ui.aspectLand.disabled = disabled;
+        this.ui.aspectPort.disabled = disabled;
+        this.ui.aspectSquare.disabled = disabled;
     }
 
     private clearMessages(): void {
-        this.ui.blockedMsg.classList.add("hidden");
         this.ui.errorMsg.classList.add("hidden");
         this.ui.fallbackMsg.classList.add("hidden");
     }
 
-    private showBlocked(message: string): void {
-        this.ui.blockedMsg.textContent = message;
-        this.ui.blockedMsg.classList.remove("hidden");
+    private applyOutputAspect(aspect: AspectFormat): void {
+        this.ui.imageContainer.setAttribute("data-aspect", aspect);
     }
 
-    private showImage(src: string): void {
+    private showImage(src: string, aspect: AspectFormat): void {
+        this.applyOutputAspect(aspect);
         this.ui.generatedImage.src = src;
         this.ui.imageContainer.classList.remove("hidden");
     }
@@ -111,7 +120,7 @@ export class Controller {
         const entry = this.history.getImages()[index] as ImageEntry | undefined;
         if (!entry) return;
         this.clearMessages();
-        this.showImage(entry.src);
+        this.showImage(entry.src, entry.aspect ?? "square");
         this.imageTitle = entry.title;
         this.ui.prompt.value = entry.prompt;
         this.ui.enhanceBtn.classList.remove("hidden");
@@ -149,14 +158,18 @@ export class Controller {
     // ── Generation ────────────────────────────────────────────────────────────
 
     private async generate(prompt: string): Promise<void> {
-        const { image, title, fallback_model } = await callGenerate(prompt);
+        const { image, title, fallback_model } = await callGenerate(
+            prompt,
+            settings.aspect,
+        );
         this.imageTitle = title;
         if (fallback_model) this.showFallback(fallback_model);
 
+        const aspect = settings.aspect;
         const src = `data:${b64Mime(image)};base64,${image}`;
-        this.showImage(src);
+        this.showImage(src, aspect);
         this.ui.enhanceBtn.classList.remove("hidden");
-        this.history.addImage({ prompt, src, title });
+        this.history.addImage({ prompt, src, title, aspect });
         this.renderHistory();
         await this.history.save(prompt);
     }
@@ -175,11 +188,11 @@ export class Controller {
         this.setControlsDisabled(true);
 
         try {
-            const check = await callOptimize(prompt, false);
-            if (check.blocked) { this.showBlocked(check.message); return; }
             await this.generate(prompt);
         } catch (err) {
             this.showError(err);
+            this.setExpanded(true);
+            this.ui.prompt.focus();
         } finally {
             this.isRunning = false;
             this.setLoading(false);
@@ -198,11 +211,13 @@ export class Controller {
 
         try {
             const result = await callOptimize(original, true);
-            if (!result.blocked && result.optimized !== original) {
+            if (result.optimized && result.optimized !== original) {
                 this.ui.prompt.value = result.optimized;
             }
         } catch (err) {
             this.showError(err);
+            this.setExpanded(true);
+            this.ui.prompt.focus();
         } finally {
             this.isRunning = false;
             this.setLoading(false);
@@ -311,7 +326,80 @@ export class Controller {
         a.click();
     }
 
+    // ── Drive upload ──────────────────────────────────────────────────────────
+
+    private setDriveBtnIcon(icon: string): void {
+        const span = this.ui.driveUploadBtn.querySelector(".material-icon");
+        if (span) span.textContent = icon;
+    }
+
+    async uploadToDrive(): Promise<void> {
+        if (!this.ui.generatedImage.src) return;
+        const btn = this.ui.driveUploadBtn;
+        btn.disabled = true;
+        btn.setAttribute("aria-busy", "true");
+        this.setDriveBtnIcon("progress_activity");
+        try {
+            await callDriveUpload(this.ui.generatedImage.src, this.imageTitle);
+            this.setDriveBtnIcon("cloud_done");
+            setTimeout(() => this.setDriveBtnIcon("cloud_upload"), 2000);
+        } catch (err) {
+            this.setDriveBtnIcon("cloud_upload");
+            this.showError(err);
+        } finally {
+            btn.disabled = false;
+            btn.removeAttribute("aria-busy");
+        }
+    }
+
+    private applyDriveStatus(s: { configured: boolean; connected: boolean }): void {
+        if (!s.configured) {
+            this.ui.driveUploadBtn.classList.add("hidden");
+            return;
+        }
+        this.ui.googleConnect?.classList.toggle("hidden", s.connected);
+        this.ui.googleDriveOk?.classList.toggle("hidden", !s.connected);
+        this.ui.driveUploadBtn.classList.toggle("hidden", !s.connected);
+    }
+
+    private async refreshDriveUi(): Promise<void> {
+        try {
+            this.applyDriveStatus(await callDriveStatus());
+        } catch {
+            // ignore: Drive optional or server down
+        }
+    }
+
+    private handleDriveQueryParams(): void {
+        const u = new URL(window.location.href);
+        const d = u.searchParams.get("drive");
+        if (!d) return;
+        u.searchParams.delete("drive");
+        history.replaceState({}, "", u.pathname + u.search + u.hash);
+        if (d === "error") {
+            this.showError(new Error(
+                'Google sign-in failed. Try "Connect Google Drive" again.',
+            ));
+        }
+    }
+
     // ── Bootstrap ─────────────────────────────────────────────────────────────
+
+    private applyAspectFromSettings(): void {
+        const a = settings.aspect;
+        this.ui.aspectLand.checked = a === "landscape";
+        this.ui.aspectPort.checked = a === "portrait";
+        this.ui.aspectSquare.checked = a === "square";
+    }
+
+    private bindAspectRadios(): void {
+        const rads = [this.ui.aspectLand, this.ui.aspectPort, this.ui.aspectSquare];
+        for (const r of rads) {
+            r.addEventListener("change", () => {
+                if (r.checked) settings.aspect = r.value as AspectFormat;
+            });
+        }
+    }
 
     private bindGenerateEvents(): void {
         this.ui.themeToggle.addEventListener("click", () => {
@@ -335,6 +423,7 @@ export class Controller {
         this.ui.textareaExpandBtn.addEventListener("click", () => this.toggleTextareaExpand());
         this.ui.enhanceBtn.addEventListener("click", () => this.enhance());
         this.ui.downloadBtn.addEventListener("click", () => this.download());
+        this.ui.driveUploadBtn.addEventListener("click", () => this.uploadToDrive());
         this.ui.historyToggle.addEventListener("click", () => this.toggleHistoryPanel());
     }
 
@@ -364,12 +453,16 @@ export class Controller {
     }
 
     bindEvents(): void {
+        this.bindAspectRadios();
         this.bindGenerateEvents();
         this.bindDescribeEvents();
     }
 
     init(): void {
         this.applyTheme(settings.theme);
+        this.applyAspectFromSettings();
+        this.handleDriveQueryParams();
+        void this.refreshDriveUi();
         this.history.load().catch(() => undefined);
     }
 }

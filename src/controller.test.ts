@@ -3,13 +3,15 @@ import { Controller } from "./controller.js";
 import { buildUI, type UI } from "./ui.js";
 
 vi.mock("./api.js", () => ({
-    b64Mime:      vi.fn(() => "image/png"),
-    callOptimize: vi.fn(),
-    callGenerate: vi.fn(),
-    callDescribe: vi.fn(),
+    b64Mime:         vi.fn(() => "image/png"),
+    callOptimize:    vi.fn(),
+    callGenerate:     vi.fn(),
+    callDescribe:     vi.fn(),
+    callDriveStatus:  vi.fn().mockResolvedValue({ configured: false, connected: false }),
+    callDriveUpload:  vi.fn(),
 }));
 
-import { callOptimize, callGenerate, callDescribe } from "./api.js";
+import { callDriveStatus, callDriveUpload, callOptimize, callGenerate, callDescribe } from "./api.js";
 
 beforeEach(() => { vi.clearAllMocks(); });
 
@@ -21,16 +23,23 @@ function makeUI(): UI {
         <button id="generate-btn"></button>
         <button id="optimize-only-btn"></button>
         <div id="prompt-bar" class="expanded"></div>
-        <div id="textarea-wrap"><textarea id="prompt"></textarea><button id="textarea-expand-btn"></button></div>
+        <div id="generate-panel" class="prompt-panel">
+            <div class="generate-panel-col">
+                <div id="textarea-wrap"><textarea id="prompt"></textarea><button id="textarea-expand-btn"></button></div>
+                <input type="radio" name="aspect" value="landscape" id="aspect-landscape">
+                <input type="radio" name="aspect" value="portrait" id="aspect-portrait">
+                <input type="radio" name="aspect" value="square" id="aspect-square" checked>
+            </div>
+        </div>
 
         <div id="image-container" class="hidden">
             <img id="generated-image" />
             <button id="enhance-btn" class="hidden"></button>
+            <button id="drive-upload-btn" class="hidden"><span class="material-icon">cloud_upload</span></button>
             <button id="download-btn"></button>
         </div>
         <div id="loading-overlay" class="hidden"></div>
         <span id="loading-msg"></span>
-        <div id="blocked-msg" class="hidden"></div>
         <div id="error-msg" class="hidden"></div>
         <div id="fallback-msg" class="hidden"></div>
         <div id="history-panel" class="hidden"></div>
@@ -40,13 +49,14 @@ function makeUI(): UI {
 
         <button id="tab-generate" class="tab active"></button>
         <button id="tab-describe" class="tab"></button>
-        <div id="generate-panel" class="prompt-panel"></div>
         <div id="describe-panel" class="prompt-panel hidden"></div>
         <div id="upload-zone"><img id="upload-preview" class="hidden"></div>
         <input type="file" id="image-upload">
         <button id="describe-btn" disabled></button>
         <button id="use-as-prompt-btn" class="hidden"></button>
         <div id="describe-result" class="hidden"></div>
+        <a id="google-connect" class="hidden" href="#"></a>
+        <span id="google-drive-ok" class="hidden"></span>
     `;
     return buildUI();
 }
@@ -129,7 +139,7 @@ describe("download button visibility", () => {
 
     beforeEach(() => {
         ui = makeUI();
-        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callOptimize).mockResolvedValue({ optimized: "a cat" });
         vi.mocked(callGenerate).mockResolvedValue({ image: "iVBORabc", title: "fluffy-cat-sunlight" });
     });
 
@@ -159,6 +169,30 @@ describe("download button visibility", () => {
         controller.download();
 
         expect(anchor.download).toBe("fluffy-cat-sunlight");
+    });
+});
+
+// ── generate / optimize error: prompt stays editable ─────────────────────────
+
+describe("generate error re-expands prompt", () => {
+    let ui: UI;
+
+    beforeEach(() => {
+        ui = makeUI();
+        vi.mocked(callGenerate).mockRejectedValue(new Error("I can't fulfill that request."));
+    });
+
+    it("re-expands the prompt bar and keeps the prompt text for editing", async () => {
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.prompt.value = "a sunset over mountains";
+        ui.promptBar.classList.add("expanded");
+
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.errorMsg.classList.contains("hidden")).toBe(false));
+        expect(ui.errorMsg.textContent).toContain("fulfill");
+        expect(ui.promptBar.classList.contains("expanded")).toBe(true);
+        expect(ui.prompt.value).toBe("a sunset over mountains");
     });
 });
 
@@ -194,6 +228,46 @@ describe("Controller.download", () => {
     });
 });
 
+// ── Google Drive ─────────────────────────────────────────────────────────────
+
+describe("Google Drive", () => {
+    let ui: UI;
+
+    beforeEach(() => {
+        ui = makeUI();
+        vi.mocked(callDriveStatus).mockResolvedValue({
+            configured: true,
+            connected: true,
+        });
+        vi.mocked(callDriveUpload).mockResolvedValue("file-id");
+    });
+
+    it("applies status from callDriveStatus on init", async () => {
+        new Controller(ui).init();
+        await vi.waitFor(() => {
+            expect(ui.driveUploadBtn.classList.contains("hidden")).toBe(false);
+        });
+    });
+
+    it("drive upload click calls callDriveUpload", async () => {
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        controller.init();
+        await vi.waitFor(() => {
+            expect(ui.driveUploadBtn.classList.contains("hidden")).toBe(false);
+        });
+
+        ui.generatedImage.src = "data:image/png;base64,xx";
+        ui.driveUploadBtn.click();
+        await vi.waitFor(() => {
+            expect(callDriveUpload).toHaveBeenCalledWith(
+                "data:image/png;base64,xx",
+                "generated-image",
+            );
+        });
+    });
+});
+
 // ── enhance mode ──────────────────────────────────────────────────────────────
 
 describe("enhance mode", () => {
@@ -201,7 +275,7 @@ describe("enhance mode", () => {
 
     beforeEach(() => {
         ui = makeUI();
-        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callOptimize).mockResolvedValue({ optimized: "a cat" });
         vi.mocked(callGenerate).mockResolvedValue({ image: "iVBORabc", title: "a-cat" });
     });
 
@@ -249,7 +323,7 @@ describe("optimize only", () => {
 
     beforeEach(() => {
         ui = makeUI();
-        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a majestic cat" });
+        vi.mocked(callOptimize).mockResolvedValue({ optimized: "a majestic cat" });
     });
 
     it("replaces prompt text with optimized result", async () => {
@@ -262,7 +336,7 @@ describe("optimize only", () => {
     });
 
     it("does not replace prompt when optimized equals original", async () => {
-        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callOptimize).mockResolvedValue({ optimized: "a cat" });
         const controller = new Controller(ui);
         controller.bindEvents();
         ui.prompt.value = "a cat";
@@ -282,16 +356,6 @@ describe("optimize only", () => {
         expect(callGenerate).not.toHaveBeenCalled();
     });
 
-    it("does not show blocked message even when API returns blocked", async () => {
-        vi.mocked(callOptimize).mockResolvedValue({ blocked: true, message: "Not allowed" });
-        const controller = new Controller(ui);
-        controller.bindEvents();
-        ui.prompt.value = "a cat";
-
-        ui.optimizeOnlyBtn.click();
-        await vi.waitFor(() => expect(ui.optimizeOnlyBtn.disabled).toBe(false));
-        expect(ui.blockedMsg.classList.contains("hidden")).toBe(true);
-    });
 });
 
 // ── Enter key ─────────────────────────────────────────────────────────────────
@@ -301,7 +365,7 @@ describe("Enter key", () => {
 
     beforeEach(() => {
         ui = makeUI();
-        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callOptimize).mockResolvedValue({ optimized: "a cat" });
         vi.mocked(callGenerate).mockResolvedValue({ image: "iVBORabc", title: "a-cat" });
     });
 
@@ -313,7 +377,7 @@ describe("Enter key", () => {
         ui.prompt.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
         await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
 
-        expect(callOptimize).toHaveBeenCalledWith("a cat", false);
+        expect(callOptimize).not.toHaveBeenCalled();
         expect(callGenerate).toHaveBeenCalled();
     });
 
@@ -336,7 +400,7 @@ describe("fallback model notification", () => {
     beforeEach(() => { ui = makeUI(); });
 
     it("shows fallback message when response includes fallback_model", async () => {
-        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callOptimize).mockResolvedValue({ optimized: "a cat" });
         vi.mocked(callGenerate).mockResolvedValue({
             image: "iVBORabc", title: "a-cat", fallback_model: "x/flux2-klein",
         });
@@ -350,7 +414,7 @@ describe("fallback model notification", () => {
     });
 
     it("does not show fallback message on normal success", async () => {
-        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callOptimize).mockResolvedValue({ optimized: "a cat" });
         vi.mocked(callGenerate).mockResolvedValue({ image: "iVBORabc", title: "a-cat" });
         const controller = new Controller(ui);
         controller.bindEvents();
@@ -362,7 +426,7 @@ describe("fallback model notification", () => {
     });
 
     it("clears fallback message on next generation", async () => {
-        vi.mocked(callOptimize).mockResolvedValue({ blocked: false, optimized: "a cat" });
+        vi.mocked(callOptimize).mockResolvedValue({ optimized: "a cat" });
         vi.mocked(callGenerate).mockResolvedValueOnce({
             image: "iVBORabc", title: "a-cat", fallback_model: "x/flux2-klein",
         }).mockResolvedValueOnce({ image: "iVBORxyz", title: "a-dog" });
@@ -376,6 +440,45 @@ describe("fallback model notification", () => {
         ui.prompt.value = "a dog";
         ui.generateBtn.click();
         await vi.waitFor(() => expect(ui.fallbackMsg.classList.contains("hidden")).toBe(true));
+    });
+});
+
+// ── output format (aspect) ───────────────────────────────────────────────────
+
+describe("output format (aspect)", () => {
+    beforeEach(() => {
+        localStorage.clear();
+        vi.clearAllMocks();
+    });
+
+    it("init syncs radio selection from localStorage", () => {
+        localStorage.setItem("aspect", "portrait");
+        const ui = makeUI();
+        new Controller(ui).init();
+        expect(ui.aspectPort.checked).toBe(true);
+    });
+
+    it("generate calls API with the selected aspect", async () => {
+        vi.mocked(callGenerate).mockResolvedValue({ image: "iVBORabc", title: "t" });
+        const ui = makeUI();
+        const controller = new Controller(ui);
+        controller.bindEvents();
+        ui.aspectLand.click();
+        ui.prompt.value = "a cat";
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(callGenerate).toHaveBeenCalled());
+        expect(callGenerate).toHaveBeenCalledWith("a cat", "landscape");
+    });
+
+    it("sets image container data-aspect to match the output format", async () => {
+        vi.mocked(callGenerate).mockResolvedValue({ image: "iVBORabc", title: "t" });
+        const ui = makeUI();
+        new Controller(ui).bindEvents();
+        ui.aspectPort.click();
+        ui.prompt.value = "a cat";
+        ui.generateBtn.click();
+        await vi.waitFor(() => expect(ui.imageContainer.classList.contains("hidden")).toBe(false));
+        expect(ui.imageContainer.getAttribute("data-aspect")).toBe("portrait");
     });
 });
 

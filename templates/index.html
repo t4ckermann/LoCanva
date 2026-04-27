@@ -22,11 +22,30 @@
             </div>
             <div class="prompt-content" id="prompt-content">
                 <div id="generate-panel" class="prompt-panel" role="tabpanel">
-                    <div class="textarea-wrap" id="textarea-wrap">
-                        <textarea id="prompt" placeholder="Describe the image you want to generate…" rows="3"></textarea>
-                        <button id="textarea-expand-btn" class="textarea-expand-btn" title="Expand textarea" aria-label="Expand textarea">
-                            <span class="material-icon">expand_more</span>
-                        </button>
+                    <div class="generate-panel-col">
+                        <div class="textarea-wrap" id="textarea-wrap">
+                            <textarea id="prompt" placeholder="Describe the image you want to generate…" rows="3"></textarea>
+                            <button id="textarea-expand-btn" class="textarea-expand-btn" title="Expand textarea" aria-label="Expand textarea">
+                                <span class="material-icon">expand_more</span>
+                            </button>
+                        </div>
+                        <fieldset class="aspect-fieldset">
+                            <legend class="aspect-legend">Format</legend>
+                            <div class="aspect-options" role="radiogroup" aria-label="Output size">
+                                <label class="aspect-label">
+                                    <input type="radio" name="aspect" value="landscape" id="aspect-landscape">
+                                    <span>Landscape</span>
+                                </label>
+                                <label class="aspect-label">
+                                    <input type="radio" name="aspect" value="portrait" id="aspect-portrait">
+                                    <span>Portrait</span>
+                                </label>
+                                <label class="aspect-label">
+                                    <input type="radio" name="aspect" value="square" id="aspect-square" checked>
+                                    <span>Square</span>
+                                </label>
+                            </div>
+                        </fieldset>
                     </div>
                     <div class="buttons">
                         <button id="optimize-only-btn">Optimize Prompt</button>
@@ -58,6 +77,9 @@
                 <button id="enhance-btn" class="image-action-btn enhance-btn hidden" title="Enhance this image" aria-label="Enhance this image">
                     <span class="material-icon">auto_fix_high</span>
                 </button>
+                <button id="drive-upload-btn" class="image-action-btn drive-upload-btn hidden" title="Upload to Google Drive" aria-label="Upload to Google Drive">
+                    <span class="material-icon">cloud_upload</span>
+                </button>
                 <button id="download-btn" class="image-action-btn download-btn" title="Download image" aria-label="Download image">
                     <span class="material-icon">download</span>
                 </button>
@@ -66,7 +88,6 @@
                 <img class="loading-overlay-spinner" src="/static/assets/logo.svg" alt="">
                 <span id="loading-msg">Generating image…</span>
             </div>
-            <div id="blocked-msg" class="blocked-msg hidden"></div>
             <div id="error-msg" class="error-msg hidden"></div>
             <div id="fallback-msg" class="fallback-msg hidden"></div>
         </main>
@@ -81,6 +102,12 @@
     </div>
     <footer>
         <p>Powered by <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> · running locally on your machine</p>
+        {% if google_drive %}
+        <p class="footer-drive">
+            <a id="google-connect" class="hidden" href="/api/auth/google">Connect Google Drive</a>
+            <span id="google-drive-ok" class="hidden">Google Drive connected</span>
+        </p>
+        {% endif %}
     </footer>
     <script type="module" src="/static/js/main.js"></script>
 </body>

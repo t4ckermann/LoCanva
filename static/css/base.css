@@ -35,9 +35,6 @@
     --text: #e8e8e8;
     --text-muted: #777;
     --accent: #c9b8ff;
-    --blocked-bg: #1f1410;
-    --blocked-border: #4a2a1a;
-    --blocked-text: #f5a97f;
     --error-bg: #1a1018;
     --error-border: #3a1a2a;
     --error-text: #f5a0c0;
@@ -56,9 +53,6 @@
     --text: #1a1a1a;
     --text-muted: #888;
     --accent: #7c5cbf;
-    --blocked-bg: #fff4ec;
-    --blocked-border: #e8b08a;
-    --blocked-text: #b05a20;
     --error-bg: #fff0f4;
     --error-border: #e8a0b8;
     --error-text: #a02050;

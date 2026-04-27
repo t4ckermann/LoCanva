@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { b64Mime, callDescribe, callGenerate, callOptimize } from "./api.js";
+import {
+    b64Mime,
+    callDescribe,
+    callDriveStatus,
+    callDriveUpload,
+    callGenerate,
+    callOptimize,
+} from "./api.js";
 
 // ── fetch mock ────────────────────────────────────────────────────────────────
 const mockFetch = vi.fn();
@@ -24,31 +31,15 @@ describe("callOptimize", () => {
     it("returns optimized prompt", async () => {
         mockFetch.mockReturnValue(jsonResponse({ optimized: "a sleek cat" }));
         await expect(callOptimize("a cat", true)).resolves.toEqual({
-            blocked: false,
             optimized: "a sleek cat",
         });
     });
 
-    it("falls back to original when optimized is null", async () => {
+    it("returns null optimized when server sends null", async () => {
         mockFetch.mockReturnValue(jsonResponse({ optimized: null }));
         await expect(callOptimize("a cat", false)).resolves.toEqual({
-            blocked: false,
-            optimized: "a cat",
+            optimized: null,
         });
-    });
-
-    it("returns blocked result with message", async () => {
-        mockFetch.mockReturnValue(jsonResponse({ blocked: true, message: "Not today." }));
-        await expect(callOptimize("bad prompt", false)).resolves.toEqual({
-            blocked: true,
-            message: "Not today.",
-        });
-    });
-
-    it("uses fallback message when server sends none", async () => {
-        mockFetch.mockReturnValue(jsonResponse({ blocked: true }));
-        const result = await callOptimize("bad prompt", false);
-        expect(result).toEqual({ blocked: true, message: "Not happening." });
     });
 
     it("throws on server error", async () => {
@@ -63,31 +54,33 @@ describe("callGenerate", () => {
 
     it("returns image and title", async () => {
         mockFetch.mockReturnValue(jsonResponse({ image: "abc123==", title: "fluffy-cat" }));
-        await expect(callGenerate("a cat")).resolves.toEqual({ image: "abc123==", title: "fluffy-cat" });
+        await expect(callGenerate("a cat", "square")).resolves.toEqual({
+            image: "abc123==", title: "fluffy-cat",
+        });
     });
 
     it("falls back to generated-image when title is missing", async () => {
         mockFetch.mockReturnValue(jsonResponse({ image: "abc123==" }));
-        const result = await callGenerate("a cat");
+        const result = await callGenerate("a cat", "square");
         expect(result.title).toBe("generated-image");
     });
 
     it("throws on server error", async () => {
         mockFetch.mockReturnValue(jsonResponse({ error: "Model not found" }));
-        await expect(callGenerate("a cat")).rejects.toThrow("Model not found");
+        await expect(callGenerate("a cat", "square")).rejects.toThrow("Model not found");
     });
 
     it("includes fallback_model when present", async () => {
         mockFetch.mockReturnValue(jsonResponse({ image: "x", title: "t", fallback_model: "other" }));
-        const result = await callGenerate("a cat");
+        const result = await callGenerate("a cat", "square");
         expect(result.fallback_model).toBe("other");
     });
 
-    it("sends prompt in request body", async () => {
+    it("sends prompt and aspect in request body", async () => {
         mockFetch.mockReturnValue(jsonResponse({ image: "x", title: "t" }));
-        await callGenerate("a red barn");
+        await callGenerate("a red barn", "landscape");
         expect(mockFetch).toHaveBeenCalledWith("/api/generate", expect.objectContaining({
-            body: JSON.stringify({ prompt: "a red barn" }),
+            body: JSON.stringify({ prompt: "a red barn", aspect: "landscape" }),
         }));
     });
 });
@@ -112,5 +105,38 @@ describe("callDescribe", () => {
         expect(mockFetch).toHaveBeenCalledWith("/api/describe", expect.objectContaining({
             body: JSON.stringify({ image: "base64data==" }),
         }));
+    });
+});
+
+// ── callDriveStatus / callDriveUpload ─────────────────────────────────────────
+
+describe("callDriveStatus", () => {
+    beforeEach(() => mockFetch.mockReset());
+
+    it("returns configured and connected flags", async () => {
+        mockFetch.mockReturnValue(jsonResponse({ configured: true, connected: false }));
+        await expect(callDriveStatus()).resolves.toEqual({
+            configured: true,
+            connected: false,
+        });
+    });
+});
+
+describe("callDriveUpload", () => {
+    beforeEach(() => mockFetch.mockReset());
+
+    it("returns file id on success", async () => {
+        mockFetch.mockReturnValue(jsonResponse({ id: "x1" }));
+        await expect(
+            callDriveUpload("data:image/png;base64,QQ==", "my-title"),
+        ).resolves.toBe("x1");
+        expect(mockFetch).toHaveBeenCalledWith("/api/drive/upload", expect.objectContaining({
+            method: "POST",
+        }));
+    });
+
+    it("throws on error body", async () => {
+        mockFetch.mockReturnValue(jsonResponse({ error: "nope" }));
+        await expect(callDriveUpload("x", "t")).rejects.toThrow("nope");
     });
 });
